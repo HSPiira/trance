@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { comparePasswords, generateToken, createAuditLog } from '@/lib/auth'
+import { comparePasswords, generateToken, createAuditLog } from '@/lib/server-auth'
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
 import { UserStatus } from '@/lib/db/schema'
@@ -73,13 +73,17 @@ export async function POST(request: NextRequest) {
 
         // Generate token
         console.log('Generating token')
-        const token = generateToken(user)
+        const token = await generateToken(user)
+        console.log('Token generated:', token.substring(0, 20) + '...')
+        console.log('JWT_SECRET is set:', !!process.env['JWT_SECRET'])
 
         // Set cookie
         console.log('Setting cookie and returning response')
+        const redirectUrl = `/${user.role.toLowerCase()}/dashboard`
         const response = NextResponse.json(
             {
                 message: 'Login successful',
+                redirectUrl,
                 user: {
                     id: user.id,
                     email: user.email,
@@ -92,13 +96,19 @@ export async function POST(request: NextRequest) {
             { status: 200 }
         )
 
+        // Set cookie with additional options
         response.cookies.set('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: 'lax',
             maxAge: 60 * 60 * 24 * 7, // 7 days
             path: '/',
         })
+
+        // Verify cookie was set
+        const cookies = response.cookies.getAll()
+        console.log('All cookies after setting:', cookies)
+        console.log('Token cookie value:', response.cookies.get('token'))
 
         return response
     } catch (error) {

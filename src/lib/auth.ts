@@ -1,14 +1,7 @@
-import { cookies } from 'next/headers'
-import { NextRequest } from 'next/server'
-import jwt from 'jsonwebtoken'
-import bcrypt from 'bcryptjs'
-import { prisma } from './db/prisma'
+'use client'
+
 import { create } from 'zustand'
 import type { User } from '@prisma/client'
-
-// JWT secret should be in environment variables
-const JWT_SECRET = process.env['JWT_SECRET'] || 'your-secret-key'
-const TOKEN_EXPIRY = '7d' // 7 days
 
 interface AuthState {
     user: User | null
@@ -25,81 +18,24 @@ export const useAuth = create<AuthState>()((set) => ({
                 method: 'POST',
             })
             set({ user: null })
+            window.location.href = '/login'
         } catch (error) {
             console.error('Logout failed:', error)
         }
     },
 }))
 
-// Hash a password
-export async function hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(10)
-    return bcrypt.hash(password, salt)
-}
-
-// Compare a password with a hash
-export async function comparePasswords(
-    password: string,
-    hash: string
-): Promise<boolean> {
-    return bcrypt.compare(password, hash)
-}
-
-// Generate a JWT token
-export function generateToken(user: User): string {
-    return jwt.sign(
-        {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-        },
-        JWT_SECRET,
-        { expiresIn: TOKEN_EXPIRY }
-    )
-}
-
-// Verify a JWT token
-export function verifyToken(token: string): any {
+// Client-side helper to check if user is logged in
+export async function checkAuth(): Promise<User | null> {
     try {
-        return jwt.verify(token, JWT_SECRET)
+        const response = await fetch('/api/auth/me')
+        if (!response.ok) {
+            return null
+        }
+        const data = await response.json()
+        return data.user
     } catch (error) {
+        console.error('Auth check failed:', error)
         return null
     }
-}
-
-// Get the current user from the request
-export async function getCurrentUser() {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('token')?.value
-
-    if (!token) {
-        return null
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-        return null
-    }
-
-    const user = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        include: {
-            clientProfile: true,
-            counsellorProfile: true,
-        },
-    })
-
-    return user
-}
-
-// Create an audit log entry
-export async function createAuditLog(userId: string, action: string) {
-    return prisma.auditLog.create({
-        data: {
-            action,
-            entityType: 'USER',
-            entityId: userId,
-            createdById: userId,
-        },
-    })
 } 

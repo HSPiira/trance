@@ -51,18 +51,40 @@ export default function LoginPage() {
                 throw new Error(data.error || 'Failed to login')
             }
 
-            // Redirect based on user role
-            const userRole = data.user.role.toLowerCase()
-            console.log('Login successful, user role:', userRole)
-            const redirectPath = `/${userRole}/dashboard`
-            console.log('Redirecting to:', redirectPath)
+            // Check for cookies
+            const cookies = document.cookie
+            console.log('Cookies after login:', cookies)
 
-            // Try both navigation methods
+            // Use the redirect URL from the API response
+            console.log('Login successful, redirecting to:', data.redirectUrl)
+
+            // Wait a moment for the cookie to be set
+            await new Promise(resolve => setTimeout(resolve, 500))
+
+            // Check cookies again after delay
+            console.log('Cookies after delay:', document.cookie)
+
+            // Try different navigation methods
             try {
-                window.location.href = redirectPath
+                // First try router.push
+                router.push(data.redirectUrl)
+
+                // If router.push doesn't work after 500ms, try window.location
+                setTimeout(() => {
+                    // Check cookies before redirect
+                    console.log('Cookies before window.location redirect:', document.cookie)
+                    const baseUrl = window.location.origin
+                    const fullUrl = `${baseUrl}${data.redirectUrl}`
+                    console.log('Router push may have failed, trying window.location:', fullUrl)
+                    window.location.href = fullUrl
+                }, 500)
             } catch (navErr) {
                 console.error('Navigation error:', navErr)
-                router.push(redirectPath)
+                // Fallback to window.location
+                const baseUrl = window.location.origin
+                const fullUrl = `${baseUrl}${data.redirectUrl}`
+                console.log('Falling back to window.location:', fullUrl)
+                window.location.href = fullUrl
             }
         } catch (err) {
             console.error('Login error:', err)
