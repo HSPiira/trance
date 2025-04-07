@@ -113,7 +113,7 @@ export default function ClientDetail({ client }: ClientDetailProps) {
 
     // Individual client dependants
     const hasIndividualDependants = !isCompany && client.dependants && client.dependants.length > 0
-    const individualDependantsCount = hasIndividualDependants ? client.dependants!.length : 0
+    const individualDependantsCount = hasIndividualDependants && client.dependants ? client.dependants.length : 0
 
     return (
         <div className="space-y-6">
