@@ -640,7 +640,7 @@ export default function ClientDetail({ client }: ClientDetailProps) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {client.dependants!.map((dependant) => (
+                                            {client.dependants && client.dependants.map((dependant) => (
                                                 <TableRow key={dependant.id}>
                                                     <TableCell className="py-3">
                                                         <div className="flex items-center gap-3">
