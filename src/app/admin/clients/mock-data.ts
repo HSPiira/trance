@@ -16,21 +16,21 @@ export type Beneficiary = {
     dependants?: Dependant[];
 }
 
-export type Client = {
+// Define the Client type interface
+export interface Client {
     id: string;
     name: string;
     email: string;
     status: string;
     joinDate: string;
     lastActive: string;
-    avatar: string;
-    phoneNumber: string;
-    clientType: 'COMPANY' | 'INDIVIDUAL';
+    avatar?: string;
+    phone?: string;
+    clientType: string;
     appointments: number;
     messages: number;
     resources: number;
-    counsellor: string;
-    notes: string;
+    notes?: string;
     beneficiaries?: Beneficiary[];
     dependants?: Dependant[];
 }
@@ -45,12 +45,11 @@ export const clients: Client[] = [
         joinDate: "2023-01-15",
         lastActive: "2023-06-20",
         avatar: "",
-        phoneNumber: "+1 (555) 123-4567",
+        phone: "+1 (555) 123-4567",
         clientType: "INDIVIDUAL",
         appointments: 12,
         messages: 34,
         resources: 5,
-        counsellor: "Dr. Sarah Williams",
         notes: "John has been attending regular sessions for anxiety management. He's shown significant improvement in coping mechanisms.",
         dependants: [
             {
@@ -75,12 +74,11 @@ export const clients: Client[] = [
         joinDate: "2023-02-28",
         lastActive: "2023-06-18",
         avatar: "",
-        phoneNumber: "+1 (555) 987-6543",
+        phone: "+1 (555) 987-6543",
         clientType: "INDIVIDUAL",
         appointments: 8,
         messages: 16,
         resources: 3,
-        counsellor: "Dr. Michael Chen",
         notes: "Jane is working through post-traumatic stress. Progress is steady and she's been very receptive to CBT techniques.",
         dependants: [
             {
@@ -99,12 +97,11 @@ export const clients: Client[] = [
         joinDate: "2022-11-05",
         lastActive: "2023-05-01",
         avatar: "",
-        phoneNumber: "+1 (555) 456-7890",
+        phone: "+1 (555) 456-7890",
         clientType: "INDIVIDUAL",
         appointments: 4,
         messages: 7,
         resources: 2,
-        counsellor: "Dr. Emma Rodriguez",
         notes: "Robert has not responded to follow-up communications since May. Last session indicated significant stress from work changes."
     },
     {
@@ -114,13 +111,12 @@ export const clients: Client[] = [
         status: "ACTIVE",
         joinDate: "2022-09-15",
         lastActive: "2023-06-19",
-        avatar: "",
-        phoneNumber: "+1 (555) 222-3333",
+        avatar: "https://avatar.vercel.sh/acme.png",
+        phone: "+1 (555) 222-3333",
         clientType: "COMPANY",
         appointments: 37,
         messages: 124,
         resources: 15,
-        counsellor: "Corporate Team A",
         notes: "Large client with over 500 employees. Plan includes both individual and group sessions. Quarterly wellness seminars.",
         beneficiaries: [
             {
@@ -180,12 +176,11 @@ export const clients: Client[] = [
         joinDate: "2023-03-10",
         lastActive: "2023-06-21",
         avatar: "",
-        phoneNumber: "+1 (555) 444-5555",
+        phone: "+1 (555) 444-5555",
         clientType: "COMPANY",
         appointments: 18,
         messages: 67,
         resources: 8,
-        counsellor: "Corporate Team B",
         notes: "Startup with 50 employees. Focus on burnout prevention and work-life balance.",
         beneficiaries: [
             {
@@ -223,12 +218,11 @@ export const clients: Client[] = [
         joinDate: "2022-06-01",
         lastActive: "2023-04-30",
         avatar: "",
-        phoneNumber: "+1 (555) 666-7777",
+        phone: "+1 (555) 666-7777",
         clientType: "COMPANY",
         appointments: 22,
         messages: 43,
         resources: 6,
-        counsellor: "Corporate Team C",
         notes: "Account currently on hold due to restructuring. Renewal discussion scheduled for next quarter.",
         beneficiaries: [
             {
@@ -250,12 +244,11 @@ export const clients: Client[] = [
         joinDate: "2023-05-12",
         lastActive: "2023-06-17",
         avatar: "",
-        phoneNumber: "+1 (555) 888-9999",
+        phone: "+1 (555) 888-9999",
         clientType: "INDIVIDUAL",
         appointments: 3,
         messages: 11,
         resources: 2,
-        counsellor: "Dr. James Wilson",
         notes: "New client dealing with workplace stress. Initial assessment completed, starting with weekly sessions."
     }
 ]; 

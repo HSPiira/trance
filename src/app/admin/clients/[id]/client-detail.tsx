@@ -85,7 +85,7 @@ type Client = {
     joinDate: string;
     lastActive: string;
     avatar: string;
-    phoneNumber: string;
+    phone: string;
     clientType: 'COMPANY' | 'INDIVIDUAL';
     appointments: number;
     messages: number;
@@ -214,51 +214,57 @@ export default function ClientDetail({ client }: ClientDetailProps) {
             </div>
 
             {/* Client Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="bg-gradient-to-br from-white to-blue-50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <Card className="bg-gradient-to-br from-white to-slate-50">
                     <CardContent className="p-4 flex items-center space-x-4">
-                        <Avatar className="h-12 w-12 border-2 border-blue-100">
-                            <AvatarImage src={client.avatar} />
-                            <AvatarFallback className="bg-blue-400/10 text-blue-600">
-                                {client.name.split(' ').map((n: string) => n[0]).join('')}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Counsellor</p>
-                            <h3 className="font-semibold tracking-tight">{client.counsellor}</h3>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-white to-green-50">
-                    <CardContent className="p-4 flex items-center space-x-4">
-                        <div className="bg-green-400/10 p-3 rounded-full flex items-center justify-center h-12 w-12 border-2 border-green-100">
-                            <Calendar className="h-6 w-6 text-green-500" />
+                        <div className="p-2 bg-slate-100 rounded-full">
+                            <Calendar className="h-6 w-6 text-slate-600" />
                         </div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Sessions</p>
-                            <h3 className="font-semibold tracking-tight">{client.appointments}</h3>
+                            <h3 className="text-xl font-semibold tracking-tight">{client.appointments}</h3>
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-white to-purple-50">
+
+                <Card className="bg-gradient-to-br from-white to-blue-50">
                     <CardContent className="p-4 flex items-center space-x-4">
-                        <div className="bg-purple-400/10 p-3 rounded-full flex items-center justify-center h-12 w-12 border-2 border-purple-100">
-                            <MessageSquare className="h-6 w-6 text-purple-500" />
+                        <div className="p-2 bg-blue-100 rounded-full">
+                            <MessageSquare className="h-6 w-6 text-blue-600" />
                         </div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Messages</p>
-                            <h3 className="font-semibold tracking-tight">{client.messages}</h3>
+                            <h3 className="text-xl font-semibold tracking-tight">{client.messages}</h3>
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-white to-blue-50">
+
+                <Card className="bg-gradient-to-br from-white to-purple-50">
                     <CardContent className="p-4 flex items-center space-x-4">
-                        <div className="bg-blue-400/10 p-3 rounded-full flex items-center justify-center h-12 w-12 border-2 border-blue-100">
-                            <Clock className="h-6 w-6 text-blue-500" />
+                        <div className="p-2 bg-purple-100 rounded-full">
+                            <FileText className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground">Resources</p>
+                            <h3 className="text-xl font-semibold tracking-tight">{client.resources}</h3>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-white to-green-50">
+                    <CardContent className="p-4 flex items-center space-x-4">
+                        <div className="p-2 bg-green-100 rounded-full">
+                            <Clock className="h-6 w-6 text-green-600" />
                         </div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Last Activity</p>
-                            <h3 className="font-semibold tracking-tight">{new Date(client.lastActive).toLocaleDateString()}</h3>
+                            <h3 className="text-sm font-semibold tracking-tight">
+                                {new Date(client.lastActive).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                })}
+                            </h3>
                         </div>
                     </CardContent>
                 </Card>
@@ -286,228 +292,100 @@ export default function ClientDetail({ client }: ClientDetailProps) {
                 </TabsList>
 
                 {/* Overview Tab */}
-                <TabsContent value="overview" className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Client Details */}
-                        <Card className="md:col-span-2">
-                            <CardHeader>
-                                <CardTitle>Client Details</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 gap-4">
+                <TabsContent value="overview" className="space-y-6">
+                    {/* Client Information */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Client Information</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
                                     <div>
-                                        <p className="text-sm font-medium">Full Name</p>
-                                        <p className="text-sm text-muted-foreground">{client.name}</p>
+                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Full Name</h4>
+                                        <p>{client.name}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium">Email</p>
-                                        <p className="text-sm text-muted-foreground">{client.email}</p>
+                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Email Address</h4>
+                                        <p>{client.email}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium">Phone</p>
-                                        <p className="text-sm text-muted-foreground">{client.phoneNumber}</p>
+                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Phone Number</h4>
+                                        <p>{client.phone || 'Not provided'}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Client Since</h4>
+                                        <p>{new Date(client.joinDate).toLocaleDateString('en-US', {
+                                            month: 'long',
+                                            day: 'numeric',
+                                            year: 'numeric',
+                                        })}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium">Client Type</p>
-                                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                            {isCompany ? (
-                                                <>
-                                                    <Building2 className="h-3 w-3 text-blue-500" />
-                                                    Company
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <User className="h-3 w-3 text-purple-500" />
-                                                    Individual
-                                                </>
-                                            )}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium">Join Date</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {new Date(client.joinDate).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium">Status</p>
+                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Status</h4>
                                         <Badge
-                                            variant={client.status === 'ACTIVE' ? 'default' : 'destructive'}
-                                            className={client.status === 'ACTIVE' ? 'bg-green-100 text-green-700 hover:bg-green-200' : ''}
+                                            variant="outline"
+                                            className={cn(
+                                                client.status === 'ACTIVE'
+                                                    ? "bg-green-50 text-green-700 border-green-200"
+                                                    : client.status === 'INACTIVE'
+                                                        ? "bg-slate-50 text-slate-700 border-slate-200"
+                                                        : client.status === 'PENDING'
+                                                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                            : "bg-red-50 text-red-700 border-red-200"
+                                            )}
                                         >
                                             {client.status}
                                         </Badge>
                                     </div>
-                                </div>
-
-                                <Separator className="my-4" />
-
-                                <div>
-                                    <p className="text-sm font-medium">Notes</p>
-                                    <p className="text-sm text-muted-foreground mt-1">{client.notes}</p>
-                                </div>
-
-                                {/* Show dependants for individual clients */}
-                                {!isCompany && hasIndividualDependants && (
-                                    <>
-                                        <Separator className="my-4" />
-                                        <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-sm font-medium">Family Members</p>
-                                                <Badge className="bg-purple-50 text-purple-600 border-purple-200">
-                                                    <User className="h-3 w-3 mr-1" />
-                                                    {individualDependantsCount} Dependants
-                                                </Badge>
-                                            </div>
-
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Name</TableHead>
-                                                        <TableHead>Relation</TableHead>
-                                                        <TableHead>Status</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {client.dependants!.map((dependant) => (
-                                                        <TableRow key={dependant.id}>
-                                                            <TableCell className="py-2">
-                                                                <div className="font-medium">{dependant.name}</div>
-                                                            </TableCell>
-                                                            <TableCell className="py-2">{dependant.relation}</TableCell>
-                                                            <TableCell className="py-2">
-                                                                <Badge
-                                                                    variant="outline"
-                                                                    className={cn(
-                                                                        dependant.status === 'ACTIVE'
-                                                                            ? "bg-green-50 text-green-600 border-green-200"
-                                                                            : "bg-gray-50 text-gray-600"
-                                                                    )}
-                                                                >
-                                                                    {dependant.status}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell className="py-2 text-right">
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                                                            <MoreHorizontal className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end">
-                                                                        <DropdownMenuItem>
-                                                                            <Edit className="mr-2 h-4 w-4" />
-                                                                            Edit
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem className="text-destructive">
-                                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                                            Remove
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-
-                                            <div className="flex justify-end mt-2">
-                                                <Button size="sm" variant="outline">
-                                                    <Plus className="mr-2 h-4 w-4" />
-                                                    Add Dependant
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
-                                {isCompany && (
-                                    <>
-                                        <Separator className="my-4" />
-                                        <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-sm font-medium">Client Hierarchy</p>
-                                                <Badge className="bg-blue-50 text-blue-700 border-blue-200">
-                                                    <Users className="h-3 w-3 mr-1" />
-                                                    {beneficiariesCount} Beneficiaries
-                                                </Badge>
-                                            </div>
-
-                                            <div className="flex items-center mb-2">
-                                                <div className="h-6 w-6 rounded-full bg-blue-400/20 flex items-center justify-center">
-                                                    <Building2 className="h-3 w-3 text-blue-600" />
-                                                </div>
-                                                <div className="ml-2 text-sm font-medium">{client.name}</div>
-                                                <div className="ml-auto">
-                                                    <Badge variant="outline">Company</Badge>
-                                                </div>
-                                            </div>
-
-                                            <div className="ml-3 pl-3 border-l border-dashed border-muted-foreground/30">
-                                                <div className="flex items-center">
-                                                    <div className="h-6 w-6 rounded-full bg-blue-400/20 flex items-center justify-center">
-                                                        <Users className="h-3 w-3 text-blue-600" />
-                                                    </div>
-                                                    <div className="ml-2 text-sm font-medium">Beneficiaries ({beneficiariesCount})</div>
-                                                </div>
-
-                                                {companyDependantsCount > 0 && (
-                                                    <div className="ml-6 mt-1">
-                                                        <div className="flex items-center">
-                                                            <div className="h-6 w-6 rounded-full bg-purple-400/20 flex items-center justify-center">
-                                                                <User className="h-3 w-3 text-purple-600" />
-                                                            </div>
-                                                            <div className="ml-2 text-sm font-medium">Dependants ({companyDependantsCount})</div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </CardContent>
-                            <CardFooter className="border-t bg-muted/50 px-6 py-3">
-                                <Button variant="outline" size="sm">
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit Details
-                                </Button>
-                            </CardFooter>
-                        </Card>
-
-                        {/* Recent Activity */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Recent Activity</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <div className="flex items-start gap-3">
-                                        <div className="mt-1 h-2 w-2 rounded-full bg-green-400" />
-                                        <div>
-                                            <p className="text-sm font-medium">Attended session</p>
-                                            <p className="text-xs text-muted-foreground">Yesterday at 2:30 PM</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3">
-                                        <div className="mt-1 h-2 w-2 rounded-full bg-blue-400" />
-                                        <div>
-                                            <p className="text-sm font-medium">Sent message</p>
-                                            <p className="text-xs text-muted-foreground">2 days ago at 11:15 AM</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3">
-                                        <div className="mt-1 h-2 w-2 rounded-full bg-purple-400" />
-                                        <div>
-                                            <p className="text-sm font-medium">Booked new session</p>
-                                            <p className="text-xs text-muted-foreground">4 days ago at 9:20 AM</p>
-                                        </div>
+                                    <div>
+                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Counsellor Assignment</h4>
+                                        <p className="text-sm text-muted-foreground">Counsellor assignment is handled in the sessions module</p>
                                     </div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                            </div>
+                            {client.notes && (
+                                <div className="mt-6">
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Notes</h4>
+                                    <p className="text-sm whitespace-pre-line">{client.notes}</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Recent Activity */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Recent Activity</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-1 h-2 w-2 rounded-full bg-green-400" />
+                                    <div>
+                                        <p className="text-sm font-medium">Attended session</p>
+                                        <p className="text-xs text-muted-foreground">Yesterday at 2:30 PM</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-1 h-2 w-2 rounded-full bg-blue-400" />
+                                    <div>
+                                        <p className="text-sm font-medium">Sent message</p>
+                                        <p className="text-xs text-muted-foreground">2 days ago at 11:15 AM</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-1 h-2 w-2 rounded-full bg-purple-400" />
+                                    <div>
+                                        <p className="text-sm font-medium">Booked new session</p>
+                                        <p className="text-xs text-muted-foreground">4 days ago at 9:20 AM</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
 
                 {/* Sessions Tab */}
