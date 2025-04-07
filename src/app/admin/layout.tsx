@@ -122,7 +122,7 @@ export default function AdminLayout({
                                 key={item.name}
                                 variant={isActive ? 'secondary' : 'ghost'}
                                 className="w-full justify-start gap-2"
-                                onClick={() => window.location.href = item.href}
+                                onClick={() => router.push(item.href)}
                             >
                                 <item.icon className="h-4 w-4" />
                                 {item.name}
