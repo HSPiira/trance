@@ -101,7 +101,7 @@ const getBeneficiariesCount = (client: Client) => {
 }
 
 // Calculate total dependants count
-const getDependantsCount = (client: any) => {
+const getDependantsCount = (client: Client) => {
     if (client.clientType === 'COMPANY' && client.beneficiaries) {
         return client.beneficiaries.reduce((total: number, beneficiary: any) => {
             return total + (beneficiary.dependants?.length || 0);
