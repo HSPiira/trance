@@ -1,0 +1,139 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
+export default function LoginPage() {
+    const router = useRouter()
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [error, setError] = useState('')
+    const [loading, setLoading] = useState(false)
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        console.log('Form submission prevented')
+        setError('')
+        setLoading(true)
+
+        if (!email || !password) {
+            console.log('Missing email or password')
+            setError('Please enter both email and password')
+            setLoading(false)
+            return
+        }
+
+        console.log('Attempting login with email:', email)
+
+        try {
+            console.log('Preparing to send login request...')
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+                credentials: 'include',
+            })
+
+            console.log('Login response status:', response.status)
+
+            const data = await response.json()
+            console.log('Login response data:', data)
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to login')
+            }
+
+            // Redirect based on user role
+            const userRole = data.user.role.toLowerCase()
+            console.log('Login successful, user role:', userRole)
+            const redirectPath = `/${userRole}/dashboard`
+            console.log('Redirecting to:', redirectPath)
+
+            // Try both navigation methods
+            try {
+                window.location.href = redirectPath
+            } catch (navErr) {
+                console.error('Navigation error:', navErr)
+                router.push(redirectPath)
+            }
+        } catch (err) {
+            console.error('Login error:', err)
+            setError(err instanceof Error ? err.message : 'An error occurred during login')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+            <Card className="w-full max-w-md">
+                <CardHeader className="space-y-1">
+                    <CardTitle className="text-2xl font-bold">Login</CardTitle>
+                    <CardDescription>
+                        Enter your email and password to access your account
+                    </CardDescription>
+                </CardHeader>
+                <form onSubmit={handleSubmit}>
+                    <CardContent className="space-y-4">
+                        {error && (
+                            <Alert variant="destructive">
+                                <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="name@example.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">Password</Label>
+                                <Link
+                                    href="/forgot-password"
+                                    className="text-sm text-blue-600 hover:text-blue-500"
+                                >
+                                    Forgot password?
+                                </Link>
+                            </div>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                    </CardContent>
+                    <CardFooter className="flex flex-col space-y-4">
+                        <Button type="submit" className="w-full" disabled={loading}>
+                            {loading ? 'Logging in...' : 'Login'}
+                        </Button>
+                        <div className="text-center text-sm">
+                            Don't have an account?{' '}
+                            <Link
+                                href="/register"
+                                className="text-blue-600 hover:text-blue-500"
+                            >
+                                Register
+                            </Link>
+                        </div>
+                    </CardFooter>
+                </form>
+            </Card>
+        </div>
+    )
+} 

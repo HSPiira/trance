@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - core user information
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  phoneNumber   String?
+  role          UserRole
+  status        UserStatus @default(PENDING)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Profile relations
+  clientProfile       ClientProfile?
+  counsellorProfile   CounsellorProfile?
+  adminProfile        AdminProfile?
+  orgContactProfile   OrgContactProfile?
+
+  // Audit logs
+  createdAuditLogs    AuditLog[] @relation("CreatedBy")
+  updatedAuditLogs    AuditLog[] @relation("UpdatedBy")
+
+  @@map("users")
+}
+
+// Client profile - specific to client users
+model ClientProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientType      ClientType
+  dateOfBirth     DateTime?
+  address         String?
+  emergencyContact String?
+  emergencyPhone  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("client_profiles")
+}
+
+// Counsellor profile - specific to counsellor users
+model CounsellorProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization    String?
+  yearsOfExperience Int?
+  certificationNumber String?
+  certificationExpiry DateTime?
+  bankDetails       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("counsellor_profiles")
+}
+
+// Admin profile - specific to admin users
+model AdminProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("admin_profiles")
+}
+
+// Organization contact profile - specific to org contact users
+model OrgContactProfile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  position      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("org_contact_profiles")
+}
+
+// Audit log - tracks user actions
+model AuditLog {
+  id          String    @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  details     String?
+  createdById String
+  createdBy   User      @relation("CreatedBy", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?     @relation("UpdatedBy", fields: [updatedById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@map("audit_logs")
+}
+
+// Enums
+enum UserRole {
+  CLIENT
+  COUNSELLOR
+  ADMIN
+  ORG_CONTACT
+}
+
+enum ClientType {
+  PRIMARY
+  SECONDARY
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+} 
