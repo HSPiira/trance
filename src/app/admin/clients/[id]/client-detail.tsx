@@ -327,7 +327,12 @@ export default function ClientDetail({ client }: ClientDetailProps) {
                                     </div>
                                     <div>
                                         <h4 className="text-sm font-medium text-muted-foreground mb-1">Counsellor Assignment</h4>
-                                        <p className="text-sm text-muted-foreground">Counsellor assignment is handled in the sessions module</p>
+                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Counsellor Assignment</h4>
+                                        {client.counsellor ? (
+                                            <p>{client.counsellor}</p>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">No counsellor assigned</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
