@@ -7,7 +7,6 @@ interface AuthState {
     user: User | null
     setUser: (user: User | null) => void
     logout: () => Promise<void>
-    signOut: () => Promise<void>
 }
 
 export const useAuth = create<AuthState>((set) => ({
