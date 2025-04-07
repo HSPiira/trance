@@ -93,6 +93,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { DataPagination } from '@/components/ui/data-pagination'
 
 // Mock data for users
 const users = [
@@ -1096,83 +1097,18 @@ export default function AdminUsersPage() {
                                     </Table>
                                 </div>
                                 <div className="flex items-center justify-between mt-4 text-sm">
-                                    <div className="text-muted-foreground">
-                                        Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-7 w-7 p-0"
-                                            onClick={() => handlePageChange(1)}
-                                            disabled={currentPage === 1}
-                                        >
-                                            <ChevronLeft className="h-4 w-4" />
-                                            <ChevronLeft className="h-4 w-4 -ml-2" />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-7 w-7 p-0"
-                                            onClick={() => handlePageChange(currentPage - 1)}
-                                            disabled={currentPage === 1}
-                                        >
-                                            <ChevronLeft className="h-4 w-4" />
-                                        </Button>
-                                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                                            let pageNumber;
-                                            if (totalPages <= 5) {
-                                                pageNumber = i + 1;
-                                            } else if (currentPage <= 3) {
-                                                pageNumber = i + 1;
-                                            } else if (currentPage >= totalPages - 2) {
-                                                pageNumber = totalPages - 4 + i;
-                                            } else {
-                                                pageNumber = currentPage - 2 + i;
-                                            }
-                                            return (
-                                                <Button
-                                                    key={pageNumber}
-                                                    variant={currentPage === pageNumber ? "default" : "outline"}
-                                                    size="sm"
-                                                    className="h-7 w-7 p-0"
-                                                    onClick={() => handlePageChange(pageNumber)}
-                                                >
-                                                    {pageNumber}
-                                                </Button>
-                                            );
-                                        })}
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-7 w-7 p-0"
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                            disabled={currentPage === totalPages}
-                                        >
-                                            <ChevronRight className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-7 w-7 p-0"
-                                            onClick={() => handlePageChange(totalPages)}
-                                            disabled={currentPage === totalPages}
-                                        >
-                                            <ChevronRight className="h-4 w-4" />
-                                            <ChevronRight className="h-4 w-4 -ml-2" />
-                                        </Button>
-                                    </div>
-                                    <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(parseInt(value))}>
-                                        <SelectTrigger className="w-[110px] h-7">
-                                            <SelectValue placeholder="Rows per page" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="5">5 per page</SelectItem>
-                                            <SelectItem value="10">10 per page</SelectItem>
-                                            <SelectItem value="15">15 per page</SelectItem>
-                                            <SelectItem value="25">25 per page</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <DataPagination
+                                        totalItems={filteredUsers.length}
+                                        itemsPerPage={itemsPerPage}
+                                        currentPage={currentPage}
+                                        onPageChange={handlePageChange}
+                                        onItemsPerPageChange={setItemsPerPage}
+                                        itemsPerPageOptions={[5, 10, 15, 25]}
+                                        showFirstLastButtons
+                                        showPageSizeSelector
+                                        showItemsInfo
+                                        className="w-full"
+                                    />
                                 </div>
                             </div>
                         </CardContent>
