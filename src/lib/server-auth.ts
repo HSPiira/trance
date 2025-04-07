@@ -72,6 +72,7 @@ export async function getCurrentUser() {
         include: {
             clientProfile: true,
             counsellorProfile: true,
+            adminProfile: true,
         },
     })
 

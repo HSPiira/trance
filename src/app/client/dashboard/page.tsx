@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { checkAuth } from '@/lib/auth'
-import { Calendar, MessageSquare, BookOpen, Clock, ArrowUpRight } from 'lucide-react'
+import { Calendar, MessageSquare, BookOpen, Clock, ArrowUpRight, ChevronRight } from 'lucide-react'
 
 export default function ClientDashboard() {
     const router = useRouter()
@@ -46,7 +46,7 @@ export default function ClientDashboard() {
 
                 {/* Quick Stats */}
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    <Card className="bg-blue-50">
+                    <Card className="bg-blue-50 shadow-sm transition-all hover:shadow-md">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-blue-600">Next Session</CardTitle>
                         </CardHeader>
@@ -61,7 +61,7 @@ export default function ClientDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-purple-50">
+                    <Card className="bg-purple-50 shadow-sm transition-all hover:shadow-md">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-purple-600">Unread Messages</CardTitle>
                         </CardHeader>
@@ -76,7 +76,7 @@ export default function ClientDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-green-50">
+                    <Card className="bg-green-50 shadow-sm transition-all hover:shadow-md">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-green-600">Resources</CardTitle>
                         </CardHeader>
@@ -91,7 +91,7 @@ export default function ClientDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-orange-50">
+                    <Card className="bg-orange-50 shadow-sm transition-all hover:shadow-md">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-orange-600">Hours Completed</CardTitle>
                         </CardHeader>
@@ -109,10 +109,13 @@ export default function ClientDashboard() {
 
                 {/* Recent Activity & Upcoming Sessions */}
                 <div className="grid gap-6 md:grid-cols-2">
-                    <Card>
+                    <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>Recent Activity</CardTitle>
-                            <button className="text-sm text-blue-600 hover:underline">View all</button>
+                            <button className="flex items-center text-sm text-blue-600 hover:underline">
+                                View all
+                                <ChevronRight className="ml-1 h-4 w-4" />
+                            </button>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -132,10 +135,13 @@ export default function ClientDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>Upcoming Sessions</CardTitle>
-                            <button className="text-sm text-blue-600 hover:underline">Schedule new</button>
+                            <button className="flex items-center text-sm text-blue-600 hover:underline">
+                                Schedule new
+                                <ChevronRight className="ml-1 h-4 w-4" />
+                            </button>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">

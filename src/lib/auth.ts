@@ -7,22 +7,28 @@ interface AuthState {
     user: User | null
     setUser: (user: User | null) => void
     logout: () => Promise<void>
+    signOut: () => Promise<void>
 }
 
-export const useAuth = create<AuthState>()((set) => ({
+export const useAuth = create<AuthState>((set) => ({
     user: null,
     setUser: (user) => set({ user }),
     logout: async () => {
         try {
-            await fetch('/api/auth/logout', {
-                method: 'POST',
-            })
+            await fetch('/api/auth/logout', { method: 'POST' })
             set({ user: null })
-            window.location.href = '/login'
         } catch (error) {
-            console.error('Logout failed:', error)
+            console.error('Logout error:', error)
         }
     },
+    signOut: async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' })
+            set({ user: null })
+        } catch (error) {
+            console.error('Sign out error:', error)
+        }
+    }
 }))
 
 // Client-side helper to check if user is logged in

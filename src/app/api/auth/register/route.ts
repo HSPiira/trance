@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { hashPassword, generateToken, createAuditLog } from '@/lib/auth'
+import { hashPassword, generateToken, createAuditLog } from '@/lib/server-auth'
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
 import type { UserRole, UserStatus, ClientType } from '@prisma/client'
@@ -11,7 +11,7 @@ const registerSchema = z.object({
     firstName: z.string().min(1),
     lastName: z.string().min(1),
     phoneNumber: z.string().nullable(),
-    role: z.enum(['CLIENT', 'COUNSELLOR'] as [UserRole, UserRole]),
+    role: z.enum(['CLIENT', 'COUNSELLOR', 'ADMIN'] as [UserRole, UserRole, UserRole]),
     clientType: z.enum(['PRIMARY', 'SECONDARY'] as [ClientType, ClientType]).optional(),
 })
 
@@ -69,10 +69,16 @@ export async function POST(request: NextRequest) {
                     userId: user.id,
                 },
             })
+        } else if (data.role === 'ADMIN') {
+            await prisma.adminProfile.create({
+                data: {
+                    userId: user.id,
+                },
+            })
         }
 
         // Generate token
-        const token = generateToken(user)
+        const token = await generateToken(user)
 
         // Create audit log
         await createAuditLog(user.id, 'REGISTER')

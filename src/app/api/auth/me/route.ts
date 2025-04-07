@@ -19,7 +19,7 @@ export async function GET() {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: user.role,
-                profile: user.clientProfile || user.counsellorProfile,
+                profile: user.clientProfile || user.counsellorProfile || user.adminProfile,
             },
         })
     } catch (error) {

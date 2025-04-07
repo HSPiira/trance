@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft, HeartHandshake } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -45,7 +46,6 @@ export default function LoginPage() {
             console.log('Login response status:', response.status)
 
             const data = await response.json()
-            console.log('Login response data:', data)
 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to login')
@@ -83,7 +83,6 @@ export default function LoginPage() {
                 // Fallback to window.location
                 const baseUrl = window.location.origin
                 const fullUrl = `${baseUrl}${data.redirectUrl}`
-                console.log('Falling back to window.location:', fullUrl)
                 window.location.href = fullUrl
             }
         } catch (err) {
@@ -96,66 +95,85 @@ export default function LoginPage() {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-            <Card className="w-full max-w-md">
-                <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl font-bold">Login</CardTitle>
-                    <CardDescription>
-                        Enter your email and password to access your account
-                    </CardDescription>
-                </CardHeader>
-                <form onSubmit={handleSubmit}>
-                    <CardContent className="space-y-4">
-                        {error && (
-                            <Alert variant="destructive">
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
-                        )}
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="name@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="password">Password</Label>
-                                <Link
-                                    href="/forgot-password"
-                                    className="text-sm text-blue-600 hover:text-blue-500"
-                                >
-                                    Forgot password?
-                                </Link>
+            <div className="w-full max-w-md">
+                <div className="flex items-center justify-center mb-6">
+                    <Link href="/" className="flex items-center gap-2 text-primary hover:text-primary/80">
+                        <HeartHandshake className="h-8 w-8" />
+                        <span className="text-xl font-semibold">Hope Counseling</span>
+                    </Link>
+                </div>
+                <Card>
+                    <CardHeader className="space-y-1">
+                        <CardTitle className="text-2xl font-bold">Login</CardTitle>
+                        <CardDescription>
+                            Enter your email and password to access your account
+                        </CardDescription>
+                    </CardHeader>
+                    <form onSubmit={handleSubmit}>
+                        <CardContent className="space-y-4">
+                            {error && (
+                                <Alert variant="destructive">
+                                    <AlertDescription>{error}</AlertDescription>
+                                </Alert>
+                            )}
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="name@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
                             </div>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
-                        </div>
-                    </CardContent>
-                    <CardFooter className="flex flex-col space-y-4">
-                        <Button type="submit" className="w-full" disabled={loading}>
-                            {loading ? 'Logging in...' : 'Login'}
-                        </Button>
-                        <div className="text-center text-sm">
-                            Don't have an account?{' '}
-                            <Link
-                                href="/register"
-                                className="text-blue-600 hover:text-blue-500"
-                            >
-                                Register
-                            </Link>
-                        </div>
-                    </CardFooter>
-                </form>
-            </Card>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Link
+                                        href="/forgot-password"
+                                        className="text-sm text-blue-600 hover:text-blue-500"
+                                    >
+                                        Forgot password?
+                                    </Link>
+                                </div>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        </CardContent>
+                        <CardFooter className="flex flex-col space-y-4">
+                            <Button type="submit" className="w-full" disabled={loading}>
+                                {loading ? 'Logging in...' : 'Login'}
+                            </Button>
+                            <div className="flex flex-col sm:flex-row justify-center gap-4 text-center text-sm">
+                                <div>
+                                    Don't have an account?{' '}
+                                    <Link
+                                        href="/register"
+                                        className="text-blue-600 hover:text-blue-500"
+                                    >
+                                        Register
+                                    </Link>
+                                </div>
+                                <div>
+                                    <Link
+                                        href="/"
+                                        className="inline-flex items-center text-blue-600 hover:text-blue-500"
+                                    >
+                                        <ArrowLeft className="mr-1 h-4 w-4" />
+                                        Back to Home
+                                    </Link>
+                                </div>
+                            </div>
+                        </CardFooter>
+                    </form>
+                </Card>
+            </div>
         </div>
     )
 } 
