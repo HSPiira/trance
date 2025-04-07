@@ -31,7 +31,8 @@ import {
     AlertCircle,
     CheckCircle2,
     XCircle,
-    Info
+    Info,
+    ClipboardCheck
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -147,6 +148,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             return [
                 ...commonItems,
                 {
+                    title: 'Assessments',
+                    href: '/client/assessments',
+                    icon: ClipboardCheck,
+                },
+                {
                     title: 'My Counsellor',
                     href: '/client/counsellor',
                     icon: Users,
@@ -207,8 +213,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                                     key={item.href}
                                     href={item.href}
                                     className={`flex items-center space-x-2 rounded-lg px-3 py-2 transition-colors ${isActive
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                                         }`}
                                 >
                                     <item.icon className="h-5 w-5" />
