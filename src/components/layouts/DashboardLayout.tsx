@@ -15,6 +15,8 @@ import {
     LogOut,
     Menu,
     X,
+    Bell,
+    Search,
 } from 'lucide-react'
 
 interface DashboardLayoutProps {
@@ -25,6 +27,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const router = useRouter()
     const { user, logout } = useAuth()
     const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+    const [notifications] = useState(2) // Example notification count
 
     const handleLogout = async () => {
         await logout()
@@ -47,11 +50,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 title: 'Messages',
                 href: `/${role.toLowerCase()}/messages`,
                 icon: MessageSquare,
-            },
-            {
-                title: 'Settings',
-                href: `/${role.toLowerCase()}/settings`,
-                icon: Settings,
             },
         ]
 
@@ -87,15 +85,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const navItems = getNavItems(user.role)
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-50 font-poppins">
             {/* Sidebar */}
             <aside
                 className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-white shadow-lg transition-transform duration-200 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
-                <div className="flex h-16 items-center justify-between px-4">
-                    <Link href={`/${user.role.toLowerCase()}/dashboard`} className="text-xl font-bold">
-                        Hope
+                <div className="flex h-16 items-center justify-between border-b px-4">
+                    <Link
+                        href={`/${user.role.toLowerCase()}/dashboard`}
+                        className="flex items-center space-x-2 text-xl font-bold text-blue-600"
+                    >
+                        <span className="text-2xl">🌟</span>
+                        <span>Hope</span>
                     </Link>
                     <Button
                         variant="ghost"
@@ -106,26 +108,37 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         <X className="h-6 w-6" />
                     </Button>
                 </div>
-                <nav className="mt-4 space-y-1 px-2">
-                    {navItems.map((item) => (
+                <div className="flex h-[calc(100vh-4rem)] flex-col">
+                    <nav className="flex-1 space-y-1 p-4">
+                        {navItems.map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                            >
+                                <item.icon className="mr-3 h-5 w-5" />
+                                {item.title}
+                            </Link>
+                        ))}
+                    </nav>
+                    <div className="border-t p-4">
                         <Link
-                            key={item.href}
-                            href={item.href}
-                            className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100"
+                            href={`/${user.role.toLowerCase()}/settings`}
+                            className="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
                         >
-                            <item.icon className="mr-3 h-5 w-5" />
-                            {item.title}
+                            <Settings className="mr-3 h-5 w-5" />
+                            Settings
                         </Link>
-                    ))}
-                    <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={handleLogout}
-                    >
-                        <LogOut className="mr-3 h-5 w-5" />
-                        Logout
-                    </Button>
-                </nav>
+                        <Button
+                            variant="ghost"
+                            className="mt-2 w-full justify-start px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600"
+                            onClick={handleLogout}
+                        >
+                            <LogOut className="mr-3 h-5 w-5" />
+                            Logout
+                        </Button>
+                    </div>
+                </div>
             </aside>
 
             {/* Main content */}
@@ -134,24 +147,51 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     }`}
             >
                 {/* Header */}
-                <header className="sticky top-0 z-40 flex h-16 items-center justify-between bg-white px-4 shadow-sm">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="lg:hidden"
-                        onClick={() => setIsSidebarOpen(true)}
-                    >
-                        <Menu className="h-6 w-6" />
-                    </Button>
+                <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm">
+                    <div className="flex items-center">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="lg:hidden"
+                            onClick={() => setIsSidebarOpen(true)}
+                        >
+                            <Menu className="h-6 w-6" />
+                        </Button>
+                        <div className="ml-4 flex items-center space-x-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    className="h-9 rounded-full border border-gray-200 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+                    </div>
                     <div className="flex items-center space-x-4">
-                        <span className="text-sm font-medium">
-                            {user.firstName} {user.lastName}
-                        </span>
+                        <Button variant="ghost" size="icon" className="relative">
+                            <Bell className="h-5 w-5" />
+                            {notifications > 0 && (
+                                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                                    {notifications}
+                                </span>
+                            )}
+                        </Button>
+                        <div className="flex items-center space-x-2">
+                            <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600">
+                                <div className="flex h-full w-full items-center justify-center text-sm font-medium">
+                                    {user.firstName[0]}
+                                </div>
+                            </div>
+                            <span className="text-sm font-medium">
+                                {user.firstName} {user.lastName}
+                            </span>
+                        </div>
                     </div>
                 </header>
 
                 {/* Page content */}
-                <main className="flex-1 p-4">{children}</main>
+                <main className="flex-1 p-6">{children}</main>
             </div>
         </div>
     )

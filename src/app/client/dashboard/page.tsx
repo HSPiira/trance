@@ -5,30 +5,32 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { checkAuth } from '@/lib/auth'
+import { Calendar, MessageSquare, BookOpen, Clock, ArrowUpRight } from 'lucide-react'
 
 export default function ClientDashboard() {
     const router = useRouter()
     const { user, setUser } = useAuth()
 
     useEffect(() => {
-        const checkAuth = async () => {
+        const initAuth = async () => {
             try {
-                const response = await fetch('/api/auth/me')
-                const data = await response.json()
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to fetch user')
+                const userData = await checkAuth()
+                if (!userData) {
+                    router.push('/login')
+                    return
                 }
-
-                setUser(data.user)
+                setUser(userData)
             } catch (error) {
-                console.error('Auth check failed:', error)
+                console.error('Dashboard auth check failed:', error)
                 router.push('/login')
             }
         }
 
-        checkAuth()
-    }, [router, setUser])
+        if (!user) {
+            initAuth()
+        }
+    }, [router, setUser, user])
 
     if (!user) {
         return null
@@ -36,34 +38,120 @@ export default function ClientDashboard() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-4">
-                <h1 className="text-2xl font-bold">Welcome, {user.firstName}!</h1>
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user.firstName}!</h1>
+                    <p className="text-sm text-gray-500">Last login: Today at 9:30 AM</p>
+                </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Next Appointment</CardTitle>
+                {/* Quick Stats */}
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                    <Card className="bg-blue-50">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-blue-600">Next Session</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-sm text-gray-500">No upcoming appointments</p>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-2xl font-bold">Tomorrow</p>
+                                    <p className="text-sm text-gray-500">10:00 AM</p>
+                                </div>
+                                <Calendar className="h-8 w-8 text-blue-600" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-purple-50">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-purple-600">Unread Messages</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-2xl font-bold">3</p>
+                                    <p className="text-sm text-gray-500">From your counselor</p>
+                                </div>
+                                <MessageSquare className="h-8 w-8 text-purple-600" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-green-50">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-green-600">Resources</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-2xl font-bold">12</p>
+                                    <p className="text-sm text-gray-500">Available materials</p>
+                                </div>
+                                <BookOpen className="h-8 w-8 text-green-600" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-orange-50">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-orange-600">Hours Completed</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-2xl font-bold">8.5</p>
+                                    <p className="text-sm text-gray-500">This month</p>
+                                </div>
+                                <Clock className="h-8 w-8 text-orange-600" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Recent Activity & Upcoming Sessions */}
+                <div className="grid gap-6 md:grid-cols-2">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle>Recent Activity</CardTitle>
+                            <button className="text-sm text-blue-600 hover:underline">View all</button>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {[1, 2, 3].map((_, i) => (
+                                    <div key={i} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                                        <div>
+                                            <p className="font-medium">Session completed</p>
+                                            <p className="text-sm text-gray-500">with Dr. Sarah Johnson</p>
+                                        </div>
+                                        <div className="flex items-center text-sm text-gray-500">
+                                            <Clock className="mr-1 h-4 w-4" />
+                                            2 days ago
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Messages</CardTitle>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle>Upcoming Sessions</CardTitle>
+                            <button className="text-sm text-blue-600 hover:underline">Schedule new</button>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-sm text-gray-500">No recent messages</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Resources</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-gray-500">No resources available</p>
+                            <div className="space-y-4">
+                                {[1, 2].map((_, i) => (
+                                    <div key={i} className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
+                                        <div>
+                                            <p className="font-medium">Individual Session</p>
+                                            <p className="text-sm text-gray-500">Tomorrow at 10:00 AM</p>
+                                        </div>
+                                        <button className="flex items-center text-sm text-blue-600 hover:underline">
+                                            Join
+                                            <ArrowUpRight className="ml-1 h-4 w-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

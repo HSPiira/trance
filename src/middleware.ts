@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyToken } from './lib/auth'
+import { verifyToken } from './lib/server-auth'
 import type { UserRole } from '@prisma/client'
 
 // Define protected routes and their allowed roles
@@ -39,71 +39,76 @@ const protectedRoutes = [
     },
 ]
 
-export function middleware(request: NextRequest) {
-    const response = NextResponse.next()
+export async function middleware(request: NextRequest) {
+    try {
+        const response = NextResponse.next()
+        const path = request.nextUrl.pathname
 
-    // Add security headers
-    response.headers.set('X-DNS-Prefetch-Control', 'on')
-    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
-    response.headers.set('X-XSS-Protection', '1; mode=block')
-    response.headers.set('X-Frame-Options', 'SAMEORIGIN')
-    response.headers.set('X-Content-Type-Options', 'nosniff')
-    response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
-    response.headers.set(
-        'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self';"
-    )
+        console.log('Middleware - Path:', path)
 
-    // Check if the path is protected
-    const path = request.nextUrl.pathname
+        // Add security headers
+        response.headers.set('X-DNS-Prefetch-Control', 'on')
+        response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+        response.headers.set('X-XSS-Protection', '1; mode=block')
+        response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.set('X-Content-Type-Options', 'nosniff')
+        response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
 
-    // Skip middleware for public routes
-    if (
-        path.startsWith('/login') ||
-        path.startsWith('/register') ||
-        path.startsWith('/unauthorized') ||
-        path.startsWith('/api/auth/login') ||
-        path.startsWith('/api/auth/register')
-    ) {
+        // Skip middleware for public routes and API routes
+        if (
+            path === '/' ||
+            path.startsWith('/login') ||
+            path.startsWith('/register') ||
+            path.startsWith('/unauthorized') ||
+            path.startsWith('/api/') ||
+            path.startsWith('/_next/') ||
+            path.startsWith('/public/') ||
+            path.startsWith('/favicon') ||
+            path.endsWith('.png') ||
+            path.endsWith('.ico') ||
+            path.endsWith('.webmanifest')
+        ) {
+            console.log('Middleware - Skipping public route')
+            return response
+        }
+
+        // Get token from cookie
+        const token = request.cookies.get('token')?.value
+        console.log('Middleware - Token present:', !!token)
+
+        if (!token) {
+            console.log('Middleware - No token, redirecting to login')
+            return NextResponse.redirect(new URL('/login', request.url))
+        }
+
+        // Verify token
+        const payload = await verifyToken(token)
+        console.log('Middleware - Token payload:', payload)
+
+        if (!payload) {
+            console.log('Middleware - Invalid token, redirecting to login')
+            return NextResponse.redirect(new URL('/login', request.url))
+        }
+
+        // Check if user has required role for the path
+        const protectedRoute = protectedRoutes.find(route => path.startsWith(route.path))
+        console.log('Middleware - Protected route:', protectedRoute)
+
+        if (protectedRoute && !protectedRoute.roles.includes(payload.role as UserRole)) {
+            console.log('Middleware - Unauthorized role, redirecting')
+            return NextResponse.redirect(new URL('/unauthorized', request.url))
+        }
+
+        console.log('Middleware - Access granted')
         return response
-    }
-
-    // Get token from cookie
-    const token = request.cookies.get('token')?.value
-
-    if (!token) {
-        // Redirect to login if no token
+    } catch (error) {
+        console.error('Middleware error:', error)
         return NextResponse.redirect(new URL('/login', request.url))
     }
-
-    // Verify token
-    const payload = verifyToken(token)
-
-    if (!payload) {
-        // Redirect to login if token is invalid
-        return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    // Check if user has required role for the path
-    const protectedRoute = protectedRoutes.find(route => path.startsWith(route.path))
-
-    if (protectedRoute && !protectedRoute.roles.includes(payload.role)) {
-        // Redirect to unauthorized page if user doesn't have required role
-        return NextResponse.redirect(new URL('/unauthorized', request.url))
-    }
-
-    return response
 }
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - public folder
-         */
-        '/((?!_next/static|_next/image|favicon.ico|public).*)',
+        '/((?!_next/static|_next/image|favicon.ico).*)',
     ],
 } 

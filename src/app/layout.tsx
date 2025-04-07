@@ -1,4 +1,5 @@
 // This file is optimized for Turbopack
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import "@/app/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -11,12 +12,9 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
-export const metadata = {
-  title: {
-    default: siteConfig.name,
-    template: `%s | ${siteConfig.name}`,
-  },
-  description: siteConfig.description,
+export const metadata: Metadata = {
+  title: 'Hope - Mental Health Platform',
+  description: 'A platform connecting clients with mental health professionals',
   keywords: siteConfig.keywords,
   authors: siteConfig.authors,
   creator: siteConfig.creator,
@@ -50,6 +48,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
