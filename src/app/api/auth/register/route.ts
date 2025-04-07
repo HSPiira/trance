@@ -70,6 +70,17 @@ export async function POST(request: NextRequest) {
                 },
             })
         } else if (data.role === 'ADMIN') {
+            // Verify authorization for admin creation
+            const authHeader = request.headers.get('authorization');
+            if (
+                !process.env.ADMIN_CREATION_SECRET ||
+                authHeader !== `Bearer ${process.env.ADMIN_CREATION_SECRET}`
+            ) {
+                return NextResponse.json(
+                    { error: 'Unauthorized admin creation attempt' },
+                    { status: 403 }
+                );
+            }
             await prisma.adminProfile.create({
                 data: {
                     userId: user.id,
