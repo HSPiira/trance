@@ -32,6 +32,7 @@ export type Client = {
     counsellor: string;
     notes: string;
     beneficiaries?: Beneficiary[];
+    dependants?: Dependant[];
 }
 
 // Mock clients data for admin client pages
@@ -50,7 +51,21 @@ export const clients: Client[] = [
         messages: 34,
         resources: 5,
         counsellor: "Dr. Sarah Williams",
-        notes: "John has been attending regular sessions for anxiety management. He's shown significant improvement in coping mechanisms."
+        notes: "John has been attending regular sessions for anxiety management. He's shown significant improvement in coping mechanisms.",
+        dependants: [
+            {
+                id: "dep-101",
+                name: "Sarah Doe",
+                relation: "Spouse",
+                status: "ACTIVE"
+            },
+            {
+                id: "dep-102",
+                name: "Tommy Doe",
+                relation: "Child",
+                status: "ACTIVE"
+            }
+        ]
     },
     {
         id: "ind-002",
@@ -66,7 +81,15 @@ export const clients: Client[] = [
         messages: 16,
         resources: 3,
         counsellor: "Dr. Michael Chen",
-        notes: "Jane is working through post-traumatic stress. Progress is steady and she's been very receptive to CBT techniques."
+        notes: "Jane is working through post-traumatic stress. Progress is steady and she's been very receptive to CBT techniques.",
+        dependants: [
+            {
+                id: "dep-201",
+                name: "Alex Smith",
+                relation: "Child",
+                status: "ACTIVE"
+            }
+        ]
     },
     {
         id: "ind-003",

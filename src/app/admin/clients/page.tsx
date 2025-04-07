@@ -92,10 +92,14 @@ const getBeneficiariesCount = (client: any) => {
 
 // Calculate total dependants count
 const getDependantsCount = (client: any) => {
-    if (client.clientType !== 'COMPANY' || !client.beneficiaries) return 0;
-    return client.beneficiaries.reduce((total: number, beneficiary: any) => {
-        return total + (beneficiary.dependants?.length || 0);
-    }, 0);
+    if (client.clientType === 'COMPANY' && client.beneficiaries) {
+        return client.beneficiaries.reduce((total: number, beneficiary: any) => {
+            return total + (beneficiary.dependants?.length || 0);
+        }, 0);
+    } else if (client.clientType === 'INDIVIDUAL' && client.dependants) {
+        return client.dependants.length;
+    }
+    return 0;
 }
 
 export default function AdminClientsPage() {
@@ -356,7 +360,16 @@ export default function AdminClientsPage() {
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <span className="text-xs text-muted-foreground">N/A</span>
+                                                    <>
+                                                        {getDependantsCount(client) > 0 ? (
+                                                            <Badge variant="outline" className="bg-purple-50 text-purple-600 text-xs font-normal border-purple-200">
+                                                                <User className="h-3 w-3 mr-1" />
+                                                                {getDependantsCount(client)}
+                                                            </Badge>
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground">N/A</span>
+                                                        )}
+                                                    </>
                                                 )}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-center">

@@ -93,6 +93,7 @@ type Client = {
     counsellor: string;
     notes: string;
     beneficiaries?: Beneficiary[];
+    dependants?: Dependant[];
 }
 
 interface ClientDetailProps {
@@ -119,11 +120,15 @@ export default function ClientDetail({ client }: ClientDetailProps) {
 
     // Calculate total beneficiaries and dependants
     const beneficiariesCount = isCompany && client.beneficiaries ? client.beneficiaries.length : 0
-    const dependantsCount = isCompany && client.beneficiaries
+    const companyDependantsCount = isCompany && client.beneficiaries
         ? client.beneficiaries.reduce((total: number, beneficiary: Beneficiary) => {
             return total + (beneficiary.dependants?.length || 0)
         }, 0)
         : 0
+
+    // Individual client dependants
+    const hasIndividualDependants = !isCompany && client.dependants && client.dependants.length > 0
+    const individualDependantsCount = hasIndividualDependants ? client.dependants!.length : 0
 
     return (
         <div className="space-y-6">
@@ -272,6 +277,12 @@ export default function ClientDetail({ client }: ClientDetailProps) {
                             Members
                         </TabsTrigger>
                     )}
+                    {!isCompany && (
+                        <TabsTrigger value="family">
+                            <User className="h-4 w-4 mr-2" />
+                            Family
+                        </TabsTrigger>
+                    )}
                 </TabsList>
 
                 {/* Overview Tab */}
@@ -336,6 +347,82 @@ export default function ClientDetail({ client }: ClientDetailProps) {
                                     <p className="text-sm text-muted-foreground mt-1">{client.notes}</p>
                                 </div>
 
+                                {/* Show dependants for individual clients */}
+                                {!isCompany && hasIndividualDependants && (
+                                    <>
+                                        <Separator className="my-4" />
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-sm font-medium">Family Members</p>
+                                                <Badge className="bg-purple-50 text-purple-600 border-purple-200">
+                                                    <User className="h-3 w-3 mr-1" />
+                                                    {individualDependantsCount} Dependants
+                                                </Badge>
+                                            </div>
+
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Name</TableHead>
+                                                        <TableHead>Relation</TableHead>
+                                                        <TableHead>Status</TableHead>
+                                                        <TableHead className="text-right">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {client.dependants!.map((dependant) => (
+                                                        <TableRow key={dependant.id}>
+                                                            <TableCell className="py-2">
+                                                                <div className="font-medium">{dependant.name}</div>
+                                                            </TableCell>
+                                                            <TableCell className="py-2">{dependant.relation}</TableCell>
+                                                            <TableCell className="py-2">
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className={cn(
+                                                                        dependant.status === 'ACTIVE'
+                                                                            ? "bg-green-50 text-green-600 border-green-200"
+                                                                            : "bg-gray-50 text-gray-600"
+                                                                    )}
+                                                                >
+                                                                    {dependant.status}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="py-2 text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                                                            <MoreHorizontal className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuItem>
+                                                                            <Edit className="mr-2 h-4 w-4" />
+                                                                            Edit
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem className="text-destructive">
+                                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                                            Remove
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+
+                                            <div className="flex justify-end mt-2">
+                                                <Button size="sm" variant="outline">
+                                                    <Plus className="mr-2 h-4 w-4" />
+                                                    Add Dependant
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
                                 {isCompany && (
                                     <>
                                         <Separator className="my-4" />
@@ -366,13 +453,13 @@ export default function ClientDetail({ client }: ClientDetailProps) {
                                                     <div className="ml-2 text-sm font-medium">Beneficiaries ({beneficiariesCount})</div>
                                                 </div>
 
-                                                {dependantsCount > 0 && (
+                                                {companyDependantsCount > 0 && (
                                                     <div className="ml-6 mt-1">
                                                         <div className="flex items-center">
                                                             <div className="h-6 w-6 rounded-full bg-purple-400/20 flex items-center justify-center">
                                                                 <User className="h-3 w-3 text-purple-600" />
                                                             </div>
-                                                            <div className="ml-2 text-sm font-medium">Dependants ({dependantsCount})</div>
+                                                            <div className="ml-2 text-sm font-medium">Dependants ({companyDependantsCount})</div>
                                                         </div>
                                                     </div>
                                                 )}
@@ -656,6 +743,113 @@ export default function ClientDetail({ client }: ClientDetailProps) {
                                         </Button>
                                     </div>
                                 )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
+
+                {/* Family Tab for Individual Clients */}
+                {!isCompany && (
+                    <TabsContent value="family" className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-medium">Family Members</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Manage dependants and family coverage
+                                </p>
+                            </div>
+                            <Button>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add Family Member
+                            </Button>
+                        </div>
+
+                        <Card>
+                            <CardContent className="p-0">
+                                {hasIndividualDependants ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead>Relation</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {client.dependants!.map((dependant) => (
+                                                <TableRow key={dependant.id}>
+                                                    <TableCell className="py-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <Avatar className="h-8 w-8">
+                                                                <AvatarFallback className="bg-purple-400/10 text-purple-600 text-xs">
+                                                                    {dependant.name.split(' ').map((n: string) => n[0]).join('')}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="font-medium">{dependant.name}</div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="py-3">{dependant.relation}</TableCell>
+                                                    <TableCell className="py-3">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn(
+                                                                dependant.status === 'ACTIVE'
+                                                                    ? "bg-green-50 text-green-600 border-green-200"
+                                                                    : "bg-gray-50 text-gray-600"
+                                                            )}
+                                                        >
+                                                            {dependant.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="py-3 text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10">
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                        <p>No family members added yet</p>
+                                        <Button className="mt-4">
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Add First Family Member
+                                        </Button>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Family Coverage</CardTitle>
+                                <CardDescription>Coverage details and plan information for family members</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex items-center justify-between border p-4 rounded-lg bg-muted/40">
+                                    <div>
+                                        <h4 className="font-medium">Family Counseling Plan</h4>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            {client.name} + {individualDependantsCount} dependants
+                                        </p>
+                                    </div>
+                                    <Badge className={cn(
+                                        client.status === 'ACTIVE'
+                                            ? "bg-green-50 text-green-600 border-green-200"
+                                            : "bg-gray-50 text-gray-600"
+                                    )}>
+                                        {client.status}
+                                    </Badge>
+                                </div>
                             </CardContent>
                         </Card>
                     </TabsContent>
