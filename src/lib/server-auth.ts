@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from './db/prisma'
 import type { User } from '@prisma/client'
 import { JWT_CONFIG } from './config'
+import { NextRequest } from 'next/server'
 
 // Hash a password
 export async function hashPassword(password: string): Promise<string> {
@@ -51,6 +52,43 @@ export async function verifyToken(token: string): Promise<any> {
         console.error('Token verification error:', error)
         return null
     }
+}
+
+// Get user from an API request
+export async function getUserFromRequest(req: NextRequest): Promise<User | null> {
+    // First try to get the token from the cookie
+    const cookieToken = req.cookies.get('token')?.value
+
+    // If not in cookie, try Authorization header
+    const authHeader = req.headers.get('Authorization')
+    const headerToken = authHeader?.startsWith('Bearer ')
+        ? authHeader.substring(7)
+        : null
+
+    // Use whichever token we found
+    const token = cookieToken || headerToken
+
+    if (!token) {
+        return null
+    }
+
+    // Verify the token
+    const decoded = await verifyToken(token)
+    if (!decoded || !decoded.id) {
+        return null
+    }
+
+    // Get the user from the database
+    const user = await prisma.user.findUnique({
+        where: { id: decoded.id as string },
+        include: {
+            clientProfile: true,
+            counsellorProfile: true,
+            adminProfile: true,
+        },
+    })
+
+    return user
 }
 
 // Get the current user from the request
