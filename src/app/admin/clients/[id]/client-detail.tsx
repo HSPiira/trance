@@ -71,12 +71,12 @@ type Client = {
     lastActive: string;
     avatar?: string;
     phone?: string;
-    clientType: 'COMPANY' | 'INDIVIDUAL';
+    clientType: string;
     appointments: number;
     messages: number;
     resources: number;
-    counsellor: string;
-    notes: string;
+    counsellor?: string;
+    notes?: string;
     beneficiaries?: Beneficiary[];
     dependants?: Dependant[];
 }
