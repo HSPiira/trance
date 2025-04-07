@@ -21,6 +21,12 @@ import {
     Trash2,
     MessageSquare,
     FileText,
+    Building2,
+    Users,
+    User,
+    ChevronDown,
+    Download,
+    Plus,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -61,96 +67,43 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
-// Mock data for clients
-const clients = [
-    {
-        id: '1',
-        name: 'John Doe',
-        email: 'john@example.com',
-        status: 'ACTIVE',
-        joinDate: '2023-01-15',
-        lastActive: '2023-06-10',
-        avatar: 'https://avatar.vercel.sh/1.png',
-        phoneNumber: '+1 (555) 123-4567',
-        clientType: 'PRIMARY',
-        appointments: 12,
-        messages: 45,
-        resources: 8,
-        counsellor: 'Dr. Michael Chen',
-        notes: 'Regular client, prefers morning sessions.'
-    },
-    {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane@example.com',
-        status: 'ACTIVE',
-        joinDate: '2023-02-20',
-        lastActive: '2023-06-12',
-        avatar: 'https://avatar.vercel.sh/2.png',
-        phoneNumber: '+1 (555) 234-5678',
-        clientType: 'SECONDARY',
-        appointments: 8,
-        messages: 32,
-        resources: 5,
-        counsellor: 'Dr. Lisa Brown',
-        notes: 'Prefers video sessions.'
-    },
-    {
-        id: '5',
-        name: 'Robert Johnson',
-        email: 'robert@example.com',
-        status: 'INACTIVE',
-        joinDate: '2023-05-15',
-        lastActive: '2023-05-20',
-        avatar: 'https://avatar.vercel.sh/5.png',
-        phoneNumber: '+1 (555) 567-8901',
-        clientType: 'PRIMARY',
-        appointments: 3,
-        messages: 12,
-        resources: 2,
-        counsellor: 'Dr. Sarah Wilson',
-        notes: 'Inactive for over a month, may need follow-up.'
-    },
-    {
-        id: '6',
-        name: 'Emily Davis',
-        email: 'emily@example.com',
-        status: 'SUSPENDED',
-        joinDate: '2023-01-25',
-        lastActive: '2023-04-15',
-        avatar: 'https://avatar.vercel.sh/6.png',
-        phoneNumber: '+1 (555) 678-9012',
-        clientType: 'SECONDARY',
-        appointments: 5,
-        messages: 18,
-        resources: 3,
-        counsellor: 'Dr. Patricia Lee',
-        notes: 'Account suspended due to inappropriate behavior.'
-    },
-    {
-        id: '9',
-        name: 'James Wilson',
-        email: 'james@example.com',
-        status: 'ACTIVE',
-        joinDate: '2023-05-20',
-        lastActive: '2023-06-10',
-        avatar: 'https://avatar.vercel.sh/9.png',
-        phoneNumber: '+1 (555) 901-2345',
-        clientType: 'PRIMARY',
-        appointments: 6,
-        messages: 22,
-        resources: 4,
-        counsellor: 'Dr. Michael Chen',
-        notes: 'New client, showing good progress.'
+// Import mock data
+import { clients } from './mock-data'
+
+// Client type icon
+const getClientTypeIcon = (clientType: string) => {
+    switch (clientType) {
+        case 'COMPANY':
+            return <Building2 className="h-4 w-4 text-blue-400" />;
+        case 'INDIVIDUAL':
+            return <User className="h-4 w-4 text-purple-400" />;
+        default:
+            return <UserCircle className="h-4 w-4" />;
     }
-]
+}
+
+// Calculate beneficiaries count
+const getBeneficiariesCount = (client: any) => {
+    if (client.clientType !== 'COMPANY' || !client.beneficiaries) return 0;
+    return client.beneficiaries.length;
+}
+
+// Calculate total dependants count
+const getDependantsCount = (client: any) => {
+    if (client.clientType !== 'COMPANY' || !client.beneficiaries) return 0;
+    return client.beneficiaries.reduce((total: number, beneficiary: any) => {
+        return total + (beneficiary.dependants?.length || 0);
+    }, 0);
+}
 
 export default function AdminClientsPage() {
     const router = useRouter()
     const { user } = useAuth()
     const [searchQuery, setSearchQuery] = useState('')
     const [statusFilter, setStatusFilter] = useState('ALL')
+    const [clientTypeFilter, setClientTypeFilter] = useState('ALL')
     const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(5)
@@ -168,7 +121,9 @@ export default function AdminClientsPage() {
 
         const matchesStatus = statusFilter === 'ALL' || client.status === statusFilter
 
-        return matchesSearch && matchesStatus
+        const matchesClientType = clientTypeFilter === 'ALL' || client.clientType === clientTypeFilter
+
+        return matchesSearch && matchesStatus && matchesClientType
     })
 
     // Pagination
@@ -187,7 +142,7 @@ export default function AdminClientsPage() {
             case 'ACTIVE':
                 return <CheckCircle2 className="h-4 w-4 text-green-500" />;
             case 'PENDING':
-                return <Calendar className="h-4 w-4 text-amber-500" />;
+                return <Calendar className="h-4 w-4 text-amber-400" />;
             case 'INACTIVE':
                 return <XCircle className="h-4 w-4 text-muted-foreground" />;
             case 'SUSPENDED':
@@ -197,12 +152,14 @@ export default function AdminClientsPage() {
         }
     }
 
-    // Calculate client statistics
+    // Calculate updated client statistics
     const clientStats = {
         total: clients.length,
         active: clients.filter(u => u.status === 'ACTIVE').length,
         inactive: clients.filter(u => u.status === 'INACTIVE').length,
-        suspended: clients.filter(u => u.status === 'SUSPENDED').length
+        suspended: clients.filter(u => u.status === 'SUSPENDED').length,
+        companies: clients.filter(u => u.clientType === 'COMPANY').length,
+        individuals: clients.filter(u => u.clientType === 'INDIVIDUAL').length
     }
 
     if (!user) {
@@ -220,123 +177,82 @@ export default function AdminClientsPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Dialog open={isAddClientDialogOpen} onOpenChange={setIsAddClientDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button>
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Add Client
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Add New Client</DialogTitle>
-                                <DialogDescription>
-                                    Create a new client account with contact details and assigned counsellor.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="name" className="text-right">
-                                        Name
-                                    </Label>
-                                    <Input
-                                        id="name"
-                                        placeholder="Full name"
-                                        className="col-span-3"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="email" className="text-right">
-                                        Email
-                                    </Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="email@example.com"
-                                        className="col-span-3"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="phone" className="text-right">
-                                        Phone
-                                    </Label>
-                                    <Input
-                                        id="phone"
-                                        placeholder="+1 (555) 123-4567"
-                                        className="col-span-3"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="counsellor" className="text-right">
-                                        Counsellor
-                                    </Label>
-                                    <Select>
-                                        <SelectTrigger className="col-span-3">
-                                            <SelectValue placeholder="Assign counsellor" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="michael">Dr. Michael Chen</SelectItem>
-                                            <SelectItem value="sarah">Dr. Sarah Wilson</SelectItem>
-                                            <SelectItem value="lisa">Dr. Lisa Brown</SelectItem>
-                                            <SelectItem value="patricia">Dr. Patricia Lee</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsAddClientDialogOpen(false)}>
-                                    Cancel
-                                </Button>
-                                <Button type="submit">Create Client</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                    <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Import
+                    </Button>
+                    <Button size="sm">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Client
+                    </Button>
                 </div>
             </div>
 
             {/* Client Summary Cards */}
-            <div className="grid grid-cols-4 gap-4">
-                <Card className="bg-primary/5">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="bg-primary/10 p-2 rounded-full">
-                            <UserCircle className="h-5 w-5 text-primary" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <Card className="bg-gradient-to-br from-white to-slate-50 shadow-sm">
+                    <CardContent className="p-4 flex items-center space-x-4">
+                        <div className="bg-primary/10 p-3 rounded-full flex items-center justify-center h-12 w-12 border-2 border-primary/20">
+                            <UserCircle className="h-6 w-6 text-primary" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Total Clients</p>
-                            <h3 className="text-2xl font-bold">{clientStats.total}</h3>
+                            <p className="text-sm font-medium text-muted-foreground">Total Clients</p>
+                            <h3 className="text-xl font-semibold tracking-tight">{clientStats.total}</h3>
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-green-500/5">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="bg-green-500/10 p-2 rounded-full">
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <Card className="bg-gradient-to-br from-white to-blue-50 shadow-sm">
+                    <CardContent className="p-4 flex items-center space-x-4">
+                        <div className="bg-blue-400/10 p-3 rounded-full flex items-center justify-center h-12 w-12 border-2 border-blue-100">
+                            <Building2 className="h-6 w-6 text-blue-500" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Active Clients</p>
-                            <h3 className="text-2xl font-bold">{clientStats.active}</h3>
+                            <p className="text-sm font-medium text-muted-foreground">Companies</p>
+                            <h3 className="text-xl font-semibold tracking-tight">{clientStats.companies}</h3>
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-amber-500/5">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="bg-amber-500/10 p-2 rounded-full">
-                            <MessageSquare className="h-5 w-5 text-amber-500" />
+                <Card className="bg-gradient-to-br from-white to-purple-50 shadow-sm">
+                    <CardContent className="p-4 flex items-center space-x-4">
+                        <div className="bg-purple-400/10 p-3 rounded-full flex items-center justify-center h-12 w-12 border-2 border-purple-100">
+                            <User className="h-6 w-6 text-purple-500" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Total Sessions</p>
-                            <h3 className="text-2xl font-bold">{clients.reduce((sum, client) => sum + client.appointments, 0)}</h3>
+                            <p className="text-sm font-medium text-muted-foreground">Individuals</p>
+                            <h3 className="text-xl font-semibold tracking-tight">{clientStats.individuals}</h3>
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-red-500/5">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="bg-red-500/10 p-2 rounded-full">
-                            <XCircle className="h-5 w-5 text-red-500" />
+                <Card className="bg-gradient-to-br from-white to-green-50 shadow-sm">
+                    <CardContent className="p-4 flex items-center space-x-4">
+                        <div className="bg-green-400/10 p-3 rounded-full flex items-center justify-center h-12 w-12 border-2 border-green-100">
+                            <CheckCircle2 className="h-6 w-6 text-green-500" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Inactive/Suspended</p>
-                            <h3 className="text-2xl font-bold">{clientStats.inactive + clientStats.suspended}</h3>
+                            <p className="text-sm font-medium text-muted-foreground">Active</p>
+                            <h3 className="text-xl font-semibold tracking-tight">{clientStats.active}</h3>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-white to-purple-50 shadow-sm">
+                    <CardContent className="p-4 flex items-center space-x-4">
+                        <div className="bg-purple-400/10 p-3 rounded-full flex items-center justify-center h-12 w-12 border-2 border-purple-100">
+                            <MessageSquare className="h-6 w-6 text-purple-500" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground">Sessions</p>
+                            <h3 className="text-xl font-semibold tracking-tight">{clients.reduce((sum, client) => sum + client.appointments, 0)}</h3>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-white to-red-50 shadow-sm">
+                    <CardContent className="p-4 flex items-center space-x-4">
+                        <div className="bg-red-400/10 p-3 rounded-full flex items-center justify-center h-12 w-12 border-2 border-red-100">
+                            <XCircle className="h-6 w-6 text-red-500" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground">Inactive</p>
+                            <h3 className="text-xl font-semibold tracking-tight">{clientStats.inactive + clientStats.suspended}</h3>
                         </div>
                     </CardContent>
                 </Card>
@@ -372,15 +288,27 @@ export default function AdminClientsPage() {
                                     <SelectItem value="SUSPENDED">Suspended</SelectItem>
                                 </SelectContent>
                             </Select>
+                            <Select value={clientTypeFilter} onValueChange={setClientTypeFilter}>
+                                <SelectTrigger className="w-[150px] h-8">
+                                    <SelectValue placeholder="Filter by type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">All Types</SelectItem>
+                                    <SelectItem value="COMPANY">Companies</SelectItem>
+                                    <SelectItem value="INDIVIDUAL">Individuals</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="rounded-md border">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[200px] px-4">Name</TableHead>
+                                        <TableHead className="w-[60px] px-4 text-center">Type</TableHead>
                                         <TableHead className="w-[170px] px-4">Email</TableHead>
-                                        <TableHead className="w-[180px] px-4">Counsellor</TableHead>
+                                        <TableHead className="w-[160px] px-4">Counsellor</TableHead>
                                         <TableHead className="w-[90px] px-4">Sessions</TableHead>
+                                        <TableHead className="w-[100px] px-4">Beneficiaries</TableHead>
                                         <TableHead className="w-[60px] px-4 text-center">Status</TableHead>
                                         <TableHead className="w-[60px] px-4">Actions</TableHead>
                                     </TableRow>
@@ -399,6 +327,9 @@ export default function AdminClientsPage() {
                                                     <span className="text-sm whitespace-nowrap">{client.name}</span>
                                                 </div>
                                             </TableCell>
+                                            <TableCell className="px-4 py-2 text-center">
+                                                {getClientTypeIcon(client.clientType)}
+                                            </TableCell>
                                             <TableCell className="px-4 py-2">
                                                 <span className="text-sm whitespace-nowrap">{client.email}</span>
                                             </TableCell>
@@ -409,6 +340,24 @@ export default function AdminClientsPage() {
                                                 <Badge variant="outline" className="text-xs font-normal">
                                                     {client.appointments}
                                                 </Badge>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2">
+                                                {client.clientType === 'COMPANY' ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="outline" className="bg-blue-50 text-blue-600 text-xs font-normal border-blue-200">
+                                                            <Users className="h-3 w-3 mr-1" />
+                                                            {getBeneficiariesCount(client)}
+                                                        </Badge>
+                                                        {getDependantsCount(client) > 0 && (
+                                                            <Badge variant="outline" className="bg-purple-50 text-purple-600 text-xs font-normal border-purple-200">
+                                                                <User className="h-3 w-3 mr-1" />
+                                                                {getDependantsCount(client)}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">N/A</span>
+                                                )}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-center">
                                                 {getStatusIcon(client.status)}
@@ -421,7 +370,7 @@ export default function AdminClientsPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => router.push(`/admin/clients/${client.id}`)}>
                                                             <Eye className="mr-2 h-4 w-4" />
                                                             View Profile
                                                         </DropdownMenuItem>
