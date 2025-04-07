@@ -59,24 +59,8 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
 
-// Define the client type (simplified for this example)
-type Dependant = {
-    id: string;
-    name: string;
-    relation: string;
-    status: string;
-}
-
-type Beneficiary = {
-    id: string;
-    name: string;
-    email: string;
-    department: string;
-    role: string;
-    status: string;
-    dependants?: Dependant[];
-}
-
+// Import from a shared definitions file to avoid duplication
+import { Dependant, Beneficiary, Client } from '@/app/admin/clients/mock-data'
 type Client = {
     id: string;
     name: string;
