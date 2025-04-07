@@ -22,8 +22,13 @@ export default function BeneficiaryDependantsPage({ params }: { params: { id: st
         return <div>This client is not a company. Only company clients have beneficiaries with dependants.</div>;
     }
 
+    // Check if beneficiaries array exists
+    if (!client.beneficiaries || client.beneficiaries.length === 0) {
+        return <div>This company has no beneficiaries.</div>;
+    }
+
     // Find the beneficiary
-    const beneficiary = client.beneficiaries?.find(b => b.id === beneficiaryId);
+    const beneficiary = client.beneficiaries.find(b => b.id === beneficiaryId);
 
     // If beneficiary not found, return 404
     if (!beneficiary) {

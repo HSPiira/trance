@@ -46,7 +46,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
-interface Dependant {
+// Using the exact same definition as in mock-data.ts for consistency
+type Dependant = {
     id: string;
     name: string;
     relation: string;
@@ -57,10 +58,12 @@ interface Client {
     id: string;
     name: string;
     email: string;
+    phone?: string;
     status: string;
     joinDate: string;
     avatar?: string;
     clientType: string;
+    appointments: number;
     dependants?: Dependant[];
     [key: string]: any;
 }

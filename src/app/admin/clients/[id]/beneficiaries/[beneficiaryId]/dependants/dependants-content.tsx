@@ -49,33 +49,7 @@ import {
     DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-
-interface Dependant {
-    id: string;
-    name: string;
-    relation: string;
-    status: string;
-}
-
-interface Beneficiary {
-    id: string;
-    name: string;
-    email: string;
-    department: string;
-    role: string;
-    status: string;
-    dependants?: Dependant[];
-}
-
-interface Client {
-    id: string;
-    name: string;
-    email: string;
-    status: string;
-    avatar?: string;
-    beneficiaries?: Beneficiary[];
-    [key: string]: any;
-}
+import { Client, Beneficiary, Dependant } from '@/app/admin/clients/mock-data'
 
 // Client Component that takes the client and beneficiary data directly
 export default function DependantsContent({
@@ -186,7 +160,7 @@ export default function DependantsContent({
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground mb-1">Active Dependants</p>
                                 <div className="text-2xl font-bold">
-                                    {filteredDependants.filter(d => d.status === 'ACTIVE').length}
+                                    {filteredDependants.filter((d: Dependant) => d.status === 'ACTIVE').length}
                                 </div>
                             </div>
                             <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">

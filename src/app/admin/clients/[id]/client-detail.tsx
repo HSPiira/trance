@@ -68,8 +68,8 @@ type Client = {
     status: string;
     joinDate: string;
     lastActive: string;
-    avatar: string;
-    phone: string;
+    avatar?: string;
+    phone?: string;
     clientType: 'COMPANY' | 'INDIVIDUAL';
     appointments: number;
     messages: number;

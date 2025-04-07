@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import {
@@ -75,9 +75,12 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from '@/components/ui/use-toast'
 
 // Import mock data
-import { clients } from './mock-data'
+import { Client, clients } from './mock-data'
 
 // Client type icon
 const getClientTypeIcon = (clientType: string) => {
@@ -118,6 +121,18 @@ export default function AdminClientsPage() {
     const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(5)
+
+    // Import related states
+    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+    const [importMethod, setImportMethod] = useState('file')
+    const [csvFile, setCsvFile] = useState<File | null>(null)
+    const [importProgress, setImportProgress] = useState(0)
+    const [isImporting, setIsImporting] = useState(false)
+    const [previewData, setPreviewData] = useState<any[]>([])
+    const [headerRow, setHeaderRow] = useState<string[]>([])
+    const [importComplete, setImportComplete] = useState(false)
+    const [importResults, setImportResults] = useState({ success: 0, errors: 0, total: 0 })
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         if (!user || user.role !== 'ADMIN') {
@@ -173,6 +188,110 @@ export default function AdminClientsPage() {
         individuals: clients.filter(u => u.clientType === 'INDIVIDUAL').length
     }
 
+    // Import related functions
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                toast({
+                    title: "Invalid file format",
+                    description: "Please upload a CSV file",
+                    variant: "destructive"
+                })
+                return
+            }
+
+            setCsvFile(file)
+            readCSVFile(file)
+        }
+    }
+
+    const readCSVFile = (file: File) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            const content = e.target?.result as string
+            if (content) {
+                parseCSVData(content)
+            }
+        }
+        reader.readAsText(file)
+    }
+
+    const parseCSVData = (csvContent: string) => {
+        const lines = csvContent.split('\n')
+        if (lines.length > 0 && lines[0]) {
+            const header = lines[0].split(',').map(h => h.trim())
+            setHeaderRow(header)
+
+            const dataRows = lines.slice(1, 6).filter(line => line.trim().length > 0).map(line => {
+                const values = line.split(',').map(v => v.trim())
+                const row: Record<string, string> = {}
+                header.forEach((h, i) => {
+                    row[h] = values[i] || ''
+                })
+                return row
+            })
+
+            setPreviewData(dataRows)
+        }
+    }
+
+    const handleImport = () => {
+        if (!csvFile) {
+            toast({
+                title: "No file selected",
+                description: "Please select a CSV file to import",
+                variant: "destructive"
+            })
+            return
+        }
+
+        setIsImporting(true)
+        setImportProgress(0)
+
+        // Simulate import progress
+        const interval = setInterval(() => {
+            setImportProgress(prev => {
+                if (prev >= 100) {
+                    clearInterval(interval)
+                    setIsImporting(false)
+                    setImportComplete(true)
+
+                    // Mock results after import is complete
+                    const total = Math.floor(Math.random() * 20) + 10
+                    const success = Math.floor(Math.random() * total)
+                    const errors = total - success
+
+                    setImportResults({
+                        total,
+                        success,
+                        errors
+                    })
+
+                    return 100
+                }
+                return prev + 5
+            })
+        }, 200)
+    }
+
+    const resetImport = () => {
+        setCsvFile(null)
+        setPreviewData([])
+        setHeaderRow([])
+        setImportProgress(0)
+        setIsImporting(false)
+        setImportComplete(false)
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+        }
+    }
+
+    const closeImportDialog = () => {
+        setIsImportDialogOpen(false)
+        resetImport()
+    }
+
     if (!user) {
         return null
     }
@@ -188,16 +307,212 @@ export default function AdminClientsPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        Import
-                    </Button>
-                    <Button size="sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Client
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9"
+                                    onClick={() => setIsImportDialogOpen(true)}
+                                >
+                                    <Download className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Import Clients</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    size="icon"
+                                    className="h-9 w-9"
+                                    onClick={() => setIsAddClientDialogOpen(true)}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Add Client</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             </div>
+
+            {/* Client Import Dialog */}
+            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>Import Clients</DialogTitle>
+                        <DialogDescription>
+                            Import client data from a CSV file or paste data directly
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {!importComplete ? (
+                        <>
+                            <Tabs defaultValue="file" className="w-full" value={importMethod} onValueChange={setImportMethod}>
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="file">Upload CSV File</TabsTrigger>
+                                    <TabsTrigger value="paste">Paste Data</TabsTrigger>
+                                </TabsList>
+
+                                <TabsContent value="file" className="pt-4">
+                                    <div className="space-y-4">
+                                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept=".csv"
+                                                onChange={handleFileChange}
+                                                className="hidden"
+                                                id="csv-file-input"
+                                            />
+                                            {!csvFile ? (
+                                                <div className="space-y-2">
+                                                    <Download className="h-10 w-10 mx-auto text-muted-foreground" />
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Drag and drop a CSV file here or click to browse
+                                                    </p>
+                                                    <Button
+                                                        variant="secondary"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                    >
+                                                        Select File
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    <FileText className="h-10 w-10 mx-auto text-primary" />
+                                                    <p className="font-medium">{csvFile.name}</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {(csvFile.size / 1024).toFixed(2)} KB
+                                                    </p>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={resetImport}
+                                                    >
+                                                        Change File
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {previewData.length > 0 && (
+                                            <div className="space-y-2">
+                                                <h3 className="text-sm font-medium">Preview (first 5 rows)</h3>
+                                                <div className="rounded-md border overflow-auto max-h-[200px]">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                {headerRow.map((header, index) => (
+                                                                    <TableHead key={index} className="py-1.5 px-2 text-xs">
+                                                                        {header}
+                                                                    </TableHead>
+                                                                ))}
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {previewData.map((row, rowIndex) => (
+                                                                <TableRow key={rowIndex}>
+                                                                    {headerRow.map((header, cellIndex) => (
+                                                                        <TableCell key={cellIndex} className="py-1 px-2 text-xs">
+                                                                            {row[header]}
+                                                                        </TableCell>
+                                                                    ))}
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Note: This is just a preview. All rows will be imported when you click Import.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {isImporting && (
+                                            <div className="space-y-2">
+                                                <p className="text-sm font-medium">Importing data...</p>
+                                                <Progress value={importProgress} className="h-2" />
+                                                <p className="text-xs text-muted-foreground text-right">
+                                                    {importProgress}% complete
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="paste" className="pt-4">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="csv-paste">Paste CSV data</Label>
+                                            <textarea
+                                                id="csv-paste"
+                                                className="w-full h-[150px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                placeholder="name,email,phone,type,status&#10;Acme Corp,acme@example.com,555-1234,COMPANY,ACTIVE&#10;John Doe,john@example.com,555-5678,INDIVIDUAL,ACTIVE"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Data should be in CSV format with column headers in the first row.
+                                            Required columns: name, email, type (COMPANY or INDIVIDUAL), status.
+                                        </p>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+
+                            <DialogFooter>
+                                <Button variant="outline" onClick={closeImportDialog}>
+                                    Cancel
+                                </Button>
+                                <Button onClick={handleImport} disabled={!csvFile && importMethod === 'file'}>
+                                    Import Clients
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    ) : (
+                        <div className="space-y-4 py-4">
+                            <div className="text-center">
+                                <div className="flex justify-center">
+                                    {importResults.errors === 0 ? (
+                                        <CheckCircle2 className="h-12 w-12 text-green-500 mb-2" />
+                                    ) : (
+                                        <AlertCircle className="h-12 w-12 text-amber-500 mb-2" />
+                                    )}
+                                </div>
+                                <h3 className="text-lg font-medium mb-1">
+                                    {importResults.errors === 0 ? 'Import Complete!' : 'Import Completed with Errors'}
+                                </h3>
+                                <p className="text-muted-foreground mb-4">
+                                    {importResults.total} total records processed
+                                </p>
+
+                                <div className="flex justify-center gap-8 text-center">
+                                    <div>
+                                        <p className="text-2xl font-bold text-green-500">{importResults.success}</p>
+                                        <p className="text-sm text-muted-foreground">Successful</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold text-red-500">{importResults.errors}</p>
+                                        <p className="text-sm text-muted-foreground">Errors</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button onClick={closeImportDialog}>
+                                    Close
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
 
             {/* Client Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -385,7 +700,7 @@ export default function AdminClientsPage() {
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center flex-wrap gap-2">
                                                 <p className="text-sm font-medium whitespace-nowrap">
-                                                    Company: <span className="text-blue-500 min-w-[2rem] inline-block">{clients.filter(c => c.clientType === 'COMPANY').reduce((sum, client) => sum + client.appointments, 0)}</span>
+                                                    Org: <span className="text-blue-500 min-w-[2rem] inline-block">{clients.filter(c => c.clientType === 'COMPANY').reduce((sum, client) => sum + client.appointments, 0)}</span>
                                                 </p>
                                                 <div className="h-4 w-[1px] bg-border"></div>
                                                 <p className="text-xs text-muted-foreground whitespace-nowrap">
@@ -401,7 +716,7 @@ export default function AdminClientsPage() {
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center flex-wrap gap-2">
                                                 <p className="text-sm font-medium whitespace-nowrap">
-                                                    Individual: <span className="text-purple-500 min-w-[2rem] inline-block">{clients.filter(c => c.clientType === 'INDIVIDUAL').reduce((sum, client) => sum + client.appointments, 0)}</span>
+                                                    Ind: <span className="text-purple-500 min-w-[2rem] inline-block">{clients.filter(c => c.clientType === 'INDIVIDUAL').reduce((sum, client) => sum + client.appointments, 0)}</span>
                                                 </p>
                                                 <div className="h-4 w-[1px] bg-border"></div>
                                                 <p className="text-xs text-muted-foreground whitespace-nowrap">
