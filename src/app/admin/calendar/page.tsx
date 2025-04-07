@@ -211,7 +211,7 @@ export default function AdminCalendarPage() {
 
     const getPreviousMonthDays = (date: Date) => {
         const firstDay = startOfMonth(date).getDay()
-        const result = []
+        const result: number[] = []
 
         if (firstDay === 0) return result // Sunday, no previous month days needed
 
@@ -226,7 +226,7 @@ export default function AdminCalendarPage() {
 
     const getNextMonthDays = (date: Date) => {
         const lastDay = endOfMonth(date).getDay()
-        const result = []
+        const result: number[] = []
 
         if (lastDay === 6) return result // Saturday, no next month days needed
 
@@ -350,7 +350,7 @@ export default function AdminCalendarPage() {
                                         title={event.title}
                                     >
                                         {getSessionTypeIcon(event.type)}
-                                        <span className="truncate">{event.time} {event.title.split('-')[0]}</span>
+                                        <span className="truncate">{event.time} {event.title?.split('-')[0]?.trim() || event.title}</span>
                                     </div>
                                 ))}
                                 {dayEvents.length > 2 && (
@@ -446,7 +446,7 @@ export default function AdminCalendarPage() {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             {getSessionTypeIcon(event.type)}
-                                            <h4 className="font-medium text-sm">{event.title.split('-')[0].trim()}</h4>
+                                            <h4 className="font-medium text-sm">{event.title?.split('-')[0]?.trim() || event.title}</h4>
                                         </div>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>

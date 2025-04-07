@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Progress } from '@/components/ui/progress'
+import { DataPagination } from '@/components/ui/data-pagination'
 
 // Mock data for resources
 const resources = [
@@ -332,39 +333,12 @@ export default function ClientResourcesPage() {
                                 />
                             ))}
                         </div>
-                        {filteredResources.length > resourcesPerPage && (
-                            <div className="mt-8 flex items-center justify-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <div className="flex items-center gap-1">
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                        <Button
-                                            key={page}
-                                            variant={currentPage === page ? "default" : "outline"}
-                                            size="sm"
-                                            className="h-8 w-8"
-                                            onClick={() => handlePageChange(page)}
-                                        >
-                                            {page}
-                                        </Button>
-                                    ))}
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    disabled={currentPage === totalPages}
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        )}
+                        <DataPagination
+                            totalItems={filteredResources.length}
+                            itemsPerPage={resourcesPerPage}
+                            currentPage={currentPage}
+                            onPageChange={handlePageChange}
+                        />
                     </TabsContent>
 
                     <TabsContent value="articles" className="mt-6">
@@ -379,39 +353,12 @@ export default function ClientResourcesPage() {
                                     />
                                 ))}
                         </div>
-                        {filteredResources.filter(r => r.category === 'articles').length > resourcesPerPage && (
-                            <div className="mt-8 flex items-center justify-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <div className="flex items-center gap-1">
-                                    {Array.from({ length: Math.ceil(filteredResources.filter(r => r.category === 'articles').length / resourcesPerPage) }, (_, i) => i + 1).map((page) => (
-                                        <Button
-                                            key={page}
-                                            variant={currentPage === page ? "default" : "outline"}
-                                            size="sm"
-                                            className="h-8 w-8"
-                                            onClick={() => handlePageChange(page)}
-                                        >
-                                            {page}
-                                        </Button>
-                                    ))}
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    disabled={currentPage === Math.ceil(filteredResources.filter(r => r.category === 'articles').length / resourcesPerPage)}
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        )}
+                        <DataPagination
+                            totalItems={filteredResources.filter(r => r.category === 'articles').length}
+                            itemsPerPage={resourcesPerPage}
+                            currentPage={currentPage}
+                            onPageChange={handlePageChange}
+                        />
                     </TabsContent>
 
                     <TabsContent value="videos" className="mt-6">
@@ -426,39 +373,12 @@ export default function ClientResourcesPage() {
                                     />
                                 ))}
                         </div>
-                        {filteredResources.filter(r => r.category === 'videos').length > resourcesPerPage && (
-                            <div className="mt-8 flex items-center justify-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <div className="flex items-center gap-1">
-                                    {Array.from({ length: Math.ceil(filteredResources.filter(r => r.category === 'videos').length / resourcesPerPage) }, (_, i) => i + 1).map((page) => (
-                                        <Button
-                                            key={page}
-                                            variant={currentPage === page ? "default" : "outline"}
-                                            size="sm"
-                                            className="h-8 w-8"
-                                            onClick={() => handlePageChange(page)}
-                                        >
-                                            {page}
-                                        </Button>
-                                    ))}
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    disabled={currentPage === Math.ceil(filteredResources.filter(r => r.category === 'videos').length / resourcesPerPage)}
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        )}
+                        <DataPagination
+                            totalItems={filteredResources.filter(r => r.category === 'videos').length}
+                            itemsPerPage={resourcesPerPage}
+                            currentPage={currentPage}
+                            onPageChange={handlePageChange}
+                        />
                     </TabsContent>
 
                     <TabsContent value="audio" className="mt-6">
@@ -473,39 +393,12 @@ export default function ClientResourcesPage() {
                                     />
                                 ))}
                         </div>
-                        {filteredResources.filter(r => r.category === 'audio').length > resourcesPerPage && (
-                            <div className="mt-8 flex items-center justify-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <div className="flex items-center gap-1">
-                                    {Array.from({ length: Math.ceil(filteredResources.filter(r => r.category === 'audio').length / resourcesPerPage) }, (_, i) => i + 1).map((page) => (
-                                        <Button
-                                            key={page}
-                                            variant={currentPage === page ? "default" : "outline"}
-                                            size="sm"
-                                            className="h-8 w-8"
-                                            onClick={() => handlePageChange(page)}
-                                        >
-                                            {page}
-                                        </Button>
-                                    ))}
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    disabled={currentPage === Math.ceil(filteredResources.filter(r => r.category === 'audio').length / resourcesPerPage)}
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        )}
+                        <DataPagination
+                            totalItems={filteredResources.filter(r => r.category === 'audio').length}
+                            itemsPerPage={resourcesPerPage}
+                            currentPage={currentPage}
+                            onPageChange={handlePageChange}
+                        />
                     </TabsContent>
                 </Tabs>
             </div>
