@@ -71,11 +71,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const { user, logout } = useAuth()
     const { theme } = useTheme()
     const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-    const [notifications, setNotifications] = useState([
-        { id: 1, title: 'New message from Dr. Johnson', time: '5m ago', read: false },
-        { id: 2, title: 'Appointment reminder', time: '1h ago', read: false },
-        { id: 3, title: 'Session notes available', time: '2h ago', read: true },
-    ])
+    const [notifications, setNotifications] = useState([])
+    const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
+
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            setIsLoadingNotifications(true)
+            try {
+                // Replace with actual API call
+                const response = await fetch('/api/notifications')
+                const data = await response.json()
+                setNotifications(data)
+            } catch (error) {
+                console.error('Failed to fetch notifications:', error)
+            } finally {
+                setIsLoadingNotifications(false)
+            }
+        }
+
+        fetchNotifications()
+    }, [user?.id])
     const [unreadCount, setUnreadCount] = useState(0)
     const [showHelp, setShowHelp] = useState(false)
 
