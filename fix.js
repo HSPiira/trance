@@ -1,1 +1,4 @@
-setIsLoading(false);if(user && user.role !== "ADMIN"){router.push("/unauthorized");}
+setIsLoading(false);
+if (user && user.role !== "ADMIN") {
+  router.push("/unauthorized");
+}
