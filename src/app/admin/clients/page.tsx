@@ -92,7 +92,7 @@ const getClientTypeIcon = (clientType: string) => {
 }
 
 // Calculate beneficiaries count
-const getBeneficiariesCount = (client: any) => {
+const getBeneficiariesCount = (client: Client) => {
     if (client.clientType !== 'COMPANY' || !client.beneficiaries) return 0;
     return client.beneficiaries.length;
 }
