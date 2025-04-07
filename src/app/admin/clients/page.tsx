@@ -306,21 +306,21 @@ export default function AdminClientsPage() {
                         <div className="rounded-md border">
                             <Table>
                                 <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[200px] px-4">Name</TableHead>
-                                        <TableHead className="w-[60px] px-4 text-center">Type</TableHead>
-                                        <TableHead className="w-[170px] px-4">Email</TableHead>
-                                        <TableHead className="w-[160px] px-4">Counsellor</TableHead>
-                                        <TableHead className="w-[90px] px-4">Sessions</TableHead>
-                                        <TableHead className="w-[100px] px-4">Beneficiaries</TableHead>
-                                        <TableHead className="w-[60px] px-4 text-center">Status</TableHead>
-                                        <TableHead className="w-[60px] px-4">Actions</TableHead>
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableHead className="w-[200px] py-2 px-3">Name</TableHead>
+                                        <TableHead className="w-[60px] py-2 px-3 text-center">Type</TableHead>
+                                        <TableHead className="w-[170px] py-2 px-3">Email</TableHead>
+                                        <TableHead className="w-[160px] py-2 px-3">Counsellor</TableHead>
+                                        <TableHead className="w-[90px] py-2 px-3">Sessions</TableHead>
+                                        <TableHead className="w-[100px] py-2 px-3">Beneficiaries</TableHead>
+                                        <TableHead className="w-[60px] py-2 px-3 text-center">Status</TableHead>
+                                        <TableHead className="w-[60px] py-2 px-3">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {paginatedClients.map((client) => (
                                         <TableRow key={client.id}>
-                                            <TableCell className="px-4 py-2">
+                                            <TableCell className="py-1.5 px-3">
                                                 <div className="flex items-center gap-2">
                                                     <Avatar className="h-6 w-6">
                                                         <AvatarImage src={client.avatar} />
@@ -331,51 +331,66 @@ export default function AdminClientsPage() {
                                                     <span className="text-sm whitespace-nowrap">{client.name}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-center">
+                                            <TableCell className="py-1.5 px-3 text-center">
                                                 {getClientTypeIcon(client.clientType)}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2">
+                                            <TableCell className="py-1.5 px-3">
                                                 <span className="text-sm whitespace-nowrap">{client.email}</span>
                                             </TableCell>
-                                            <TableCell className="px-4 py-2">
+                                            <TableCell className="py-1.5 px-3">
                                                 <span className="text-sm whitespace-nowrap">{client.counsellor}</span>
                                             </TableCell>
-                                            <TableCell className="px-4 py-2">
+                                            <TableCell className="py-1.5 px-3">
                                                 <Badge variant="outline" className="text-xs font-normal">
                                                     {client.appointments}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="px-4 py-2">
+                                            <TableCell className="py-1.5 px-3">
                                                 {client.clientType === 'COMPANY' ? (
                                                     <div className="flex items-center gap-2">
-                                                        <Badge variant="outline" className="bg-blue-50 text-blue-600 text-xs font-normal border-blue-200">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-6 px-2 bg-blue-50 text-blue-600 text-xs font-normal border-blue-200 hover:bg-blue-100"
+                                                            onClick={() => router.push(`/admin/clients/${client.id}/beneficiaries`)}
+                                                        >
                                                             <Users className="h-3 w-3 mr-1" />
                                                             {getBeneficiariesCount(client)}
-                                                        </Badge>
+                                                        </Button>
                                                         {getDependantsCount(client) > 0 && (
-                                                            <Badge variant="outline" className="bg-purple-50 text-purple-600 text-xs font-normal border-purple-200">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-6 px-2 bg-purple-50 text-purple-600 text-xs font-normal border-purple-200 hover:bg-purple-100"
+                                                                onClick={() => router.push(`/admin/clients/${client.id}/dependants`)}
+                                                            >
                                                                 <User className="h-3 w-3 mr-1" />
                                                                 {getDependantsCount(client)}
-                                                            </Badge>
+                                                            </Button>
                                                         )}
                                                     </div>
                                                 ) : (
                                                     <>
                                                         {getDependantsCount(client) > 0 ? (
-                                                            <Badge variant="outline" className="bg-purple-50 text-purple-600 text-xs font-normal border-purple-200">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-6 px-2 bg-purple-50 text-purple-600 text-xs font-normal border-purple-200 hover:bg-purple-100"
+                                                                onClick={() => router.push(`/admin/clients/${client.id}/family`)}
+                                                            >
                                                                 <User className="h-3 w-3 mr-1" />
                                                                 {getDependantsCount(client)}
-                                                            </Badge>
+                                                            </Button>
                                                         ) : (
                                                             <span className="text-xs text-muted-foreground">N/A</span>
                                                         )}
                                                     </>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-center">
+                                            <TableCell className="py-1.5 px-3 text-center">
                                                 {getStatusIcon(client.status)}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2">
+                                            <TableCell className="py-1.5 px-3">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" className="h-7 w-7 p-0">
