@@ -20,14 +20,6 @@ export const useAuth = create<AuthState>((set) => ({
             console.error('Logout error:', error)
         }
     },
-    signOut: async () => {
-        try {
-            await fetch('/api/auth/logout', { method: 'POST' })
-            set({ user: null })
-        } catch (error) {
-            console.error('Sign out error:', error)
-        }
-    }
 }))
 
 // Client-side helper to check if user is logged in
