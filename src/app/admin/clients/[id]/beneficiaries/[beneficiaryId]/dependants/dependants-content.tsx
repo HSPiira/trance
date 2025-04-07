@@ -63,10 +63,11 @@ export default function DependantsContent({
     const { user } = useAuth()
     const [searchQuery, setSearchQuery] = useState('')
 
-    // Auth check
+    // Auth check with multiple authorized roles
     useEffect(() => {
-        if (!user || user.role !== 'ADMIN') {
-            router.push('/unauthorized')
+        const authorizedRoles = ['ADMIN', 'SUPER_ADMIN', 'MANAGER']; // Add all roles that should have access
+        if (!user || !authorizedRoles.includes(user.role)) {
+            router.push('/unauthorized');
         }
     }, [router, user])
 

@@ -41,6 +41,34 @@ interface Question {
     required: boolean
 }
 
+// Add this helper function before the component or in a utility section
+const prepareResponses = (answers: Record<string, any>, questions: any[]) => {
+    return Object.entries(answers).map(([questionId, value]) => {
+        const question = questions.find(q => q.id === questionId)
+
+        if (!question) return null
+
+        const response: any = {
+            questionId,
+            questionType: question.type,
+        }
+
+        if (question.type === 'MULTIPLE_CHOICE') {
+            response.selectedOptions = value
+        } else if (question.type === 'SINGLE_CHOICE') {
+            response.selectedOption = value
+        } else if (question.type === 'SCALE') {
+            response.numericValue = parseInt(value)
+        } else if (question.type === 'BOOLEAN') {
+            response.booleanValue = value
+        } else if (question.type === 'TEXT') {
+            response.textValue = value
+        }
+
+        return response
+    }).filter(Boolean)
+}
+
 export default function AssessmentDetailPage({ params }: { params: { id: string } }) {
     const router = useRouter()
     const { user } = useAuth()
@@ -206,38 +234,15 @@ export default function AssessmentDetailPage({ params }: { params: { id: string 
         })
     }
 
-    // Save progress
+    // Update saveProgress to use the helper function
     const saveProgress = async () => {
         if (Object.keys(answers).length === 0) return
 
         try {
             setIsSaving(true)
 
-            // Prepare the responses
-            const responses = Object.entries(answers).map(([questionId, value]) => {
-                const question = questions.find(q => q.id === questionId)
-
-                if (!question) return null
-
-                const response: any = {
-                    questionId,
-                    questionType: question.type,
-                }
-
-                if (question.type === 'MULTIPLE_CHOICE') {
-                    response.selectedOptions = value
-                } else if (question.type === 'SINGLE_CHOICE') {
-                    response.selectedOption = value
-                } else if (question.type === 'SCALE') {
-                    response.numericValue = parseInt(value)
-                } else if (question.type === 'BOOLEAN') {
-                    response.booleanValue = value
-                } else if (question.type === 'TEXT') {
-                    response.textValue = value
-                }
-
-                return response
-            }).filter(Boolean)
+            // Use the helper function
+            const responses = prepareResponses(answers, questions)
 
             // For demo - just pretend we sent the request
             console.log('Saving progress with responses:', responses)
@@ -317,31 +322,8 @@ export default function AssessmentDetailPage({ params }: { params: { id: string 
                 return
             }
 
-            // Prepare the responses
-            const responses = Object.entries(answers).map(([questionId, value]) => {
-                const question = questions.find(q => q.id === questionId)
-
-                if (!question) return null
-
-                const response: any = {
-                    questionId,
-                    questionType: question.type,
-                }
-
-                if (question.type === 'MULTIPLE_CHOICE') {
-                    response.selectedOptions = value
-                } else if (question.type === 'SINGLE_CHOICE') {
-                    response.selectedOption = value
-                } else if (question.type === 'SCALE') {
-                    response.numericValue = parseInt(value)
-                } else if (question.type === 'BOOLEAN') {
-                    response.booleanValue = value
-                } else if (question.type === 'TEXT') {
-                    response.textValue = value
-                }
-
-                return response
-            }).filter(Boolean)
+            // Replace response construction with helper function
+            const responses = prepareResponses(answers, questions)
 
             // For demo - just pretend we sent the request
             console.log('Submitting assessment with responses:', responses)
