@@ -59,84 +59,27 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 
-// Mock data for resources
-const resources = [
-    {
-        id: '1',
-        title: 'Understanding Anxiety',
-        description: 'A comprehensive guide to understanding and managing anxiety.',
-        type: 'ARTICLE',
-        status: 'PUBLISHED',
-        author: {
-            name: 'Dr. Michael Chen',
-            avatar: 'https://avatar.vercel.sh/3.png'
-        },
-        publishDate: '2023-06-01',
-        views: 1250,
-        likes: 45,
-        comments: 12
-    },
-    {
-        id: '2',
-        title: 'Mindfulness Meditation',
-        description: 'Learn the basics of mindfulness meditation in this video guide.',
-        type: 'VIDEO',
-        status: 'PUBLISHED',
-        author: {
-            name: 'Dr. Sarah Wilson',
-            avatar: 'https://avatar.vercel.sh/4.png'
-        },
-        publishDate: '2023-06-05',
-        views: 980,
-        likes: 32,
-        comments: 8
-    },
-    {
-        id: '3',
-        title: 'Stress Management Techniques',
-        description: 'Audio guide for effective stress management techniques.',
-        type: 'AUDIO',
-        status: 'DRAFT',
-        author: {
-            name: 'Dr. Michael Chen',
-            avatar: 'https://avatar.vercel.sh/3.png'
-        },
-        publishDate: '2023-06-10',
-        views: 0,
-        likes: 0,
-        comments: 0
-    },
-    {
-        id: '4',
-        title: 'Depression Recovery',
-        description: 'A detailed article about depression recovery and treatment options.',
-        type: 'ARTICLE',
-        status: 'PUBLISHED',
-        author: {
-            name: 'Dr. Sarah Wilson',
-            avatar: 'https://avatar.vercel.sh/4.png'
-        },
-        publishDate: '2023-06-15',
-        views: 2100,
-        likes: 78,
-        comments: 25
-    },
-    {
-        id: '5',
-        title: 'Sleep Hygiene Tips',
-        description: 'Video guide for improving sleep hygiene and quality.',
-        type: 'VIDEO',
-        status: 'REVIEW',
-        author: {
-            name: 'Dr. Michael Chen',
-            avatar: 'https://avatar.vercel.sh/3.png'
-        },
-        publishDate: '2023-06-20',
-        views: 0,
-        likes: 0,
-        comments: 0
+// State to hold fetched resources
+const [resources, setResources] = useState([])
+
+// Fetch resources from API
+useEffect(() => {
+    const fetchResources = async () => {
+        try {
+            const response = await fetch('/api/admin/resources')
+            if (!response.ok) throw new Error('Failed to fetch resources')
+            const data = await response.json()
+            setResources(data)
+        } catch (error) {
+            console.error('Error fetching resources:', error)
+            // Handle error state appropriately
+        }
     }
-]
+    
+    if (user && user.role === 'ADMIN') {
+        fetchResources()
+    }
+}, [user])
 
 export default function AdminResourcesPage() {
     const router = useRouter()
