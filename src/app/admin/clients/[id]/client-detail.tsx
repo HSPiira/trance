@@ -60,7 +60,8 @@ import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
 
 // Import from a shared definitions file to avoid duplication
-import { Dependant, Beneficiary, Client } from '@/app/admin/clients/mock-data'
+import { Dependant, Beneficiary } from '@/app/admin/clients/mock-data'
+
 type Client = {
     id: string;
     name: string;
