@@ -9,18 +9,15 @@ interface AuthState {
     logout: () => Promise<void>
 }
 
-export const useAuth = create<AuthState>()((set) => ({
+export const useAuth = create<AuthState>((set) => ({
     user: null,
     setUser: (user) => set({ user }),
     logout: async () => {
         try {
-            await fetch('/api/auth/logout', {
-                method: 'POST',
-            })
+            await fetch('/api/auth/logout', { method: 'POST' })
             set({ user: null })
-            window.location.href = '/login'
         } catch (error) {
-            console.error('Logout failed:', error)
+            console.error('Logout error:', error)
         }
     },
 }))
