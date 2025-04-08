@@ -221,6 +221,9 @@ export default function AdminClientsPage() {
     // Bulk actions state
     const [selectedClients, setSelectedClients] = useState<string[]>([])
     const [selectAll, setSelectAll] = useState(false)
+    const [showCounselorDialog, setShowCounselorDialog] = useState(false)
+
+    const [clients, setClients] = useState<Client[]>([])
 
     useEffect(() => {
         if (!user || user.role !== 'ADMIN') {
@@ -232,50 +235,64 @@ export default function AdminClientsPage() {
     const filteredClients = useMemo(() => {
         let result = [...clients];
 
-        // Apply search filter
-        if (searchQuery) {
-            result = result.filter(client =>
-                client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                client.email.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        }
+        // Combine all filters into a single pass
+        result = result.filter(client => {
+            // Search filter - check multiple fields
+            if (searchQuery) {
+                const searchLower = searchQuery.toLowerCase();
+                const searchableFields = [
+                    client.name,
+                    client.email,
+                    client.phone,
+                    client.status,
+                    client.clientType
+                ].map(field => (field || '').toLowerCase());
 
-        // Apply status filter
-        if (statusFilter !== "ALL") {
-            result = result.filter(client => client.status === statusFilter);
-        }
+                if (!searchableFields.some(field => field.includes(searchLower))) {
+                    return false;
+                }
+            }
 
-        // Apply client type filter
-        if (clientTypeFilter !== "ALL") {
-            result = result.filter(client => client.clientType === clientTypeFilter);
-        }
+            // Status filter
+            if (statusFilter !== "ALL" && client.status !== statusFilter) {
+                return false;
+            }
 
-        // Apply quick filter
-        switch (filter) {
-            case 'COMPANIES':
-                result = result.filter(client => client.clientType === 'COMPANY');
-                break;
-            case 'INDIVIDUALS':
-                result = result.filter(client => client.clientType === 'INDIVIDUAL');
-                break;
-            case 'ACTIVE':
-                result = result.filter(client => client.status === 'ACTIVE');
-                break;
-            case 'INACTIVE':
-                result = result.filter(client => client.status === 'INACTIVE');
-                break;
-            case 'RECENT':
-                result = result.filter(client => {
-                    const lastActive = new Date(client.lastActive);
-                    const now = new Date();
-                    const diffDays = Math.ceil((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
-                    return diffDays <= 30;
-                });
-                break;
-            default:
-                // 'ALL' - no additional filtering
-                break;
-        }
+            // Client type filter
+            if (clientTypeFilter !== "ALL" && client.clientType !== clientTypeFilter) {
+                return false;
+            }
+
+            // Quick filter
+            switch (filter) {
+                case 'COMPANIES':
+                    if (client.clientType !== 'COMPANY') return false;
+                    break;
+                case 'INDIVIDUALS':
+                    if (client.clientType !== 'INDIVIDUAL') return false;
+                    break;
+                case 'ACTIVE':
+                    if (client.status !== 'ACTIVE') return false;
+                    break;
+                case 'INACTIVE':
+                    if (client.status !== 'INACTIVE') return false;
+                    break;
+                case 'RECENT':
+                    try {
+                        const lastActive = new Date(client.lastActive);
+                        if (isNaN(lastActive.getTime())) return false;
+
+                        const now = new Date();
+                        const diffDays = Math.ceil((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
+                        if (diffDays > 30) return false;
+                    } catch (error) {
+                        return false;
+                    }
+                    break;
+            }
+
+            return true;
+        });
 
         return result;
     }, [clients, searchQuery, statusFilter, clientTypeFilter, filter]);
@@ -303,36 +320,139 @@ export default function AdminClientsPage() {
         }
     }
 
-    const handleBulkAction = (action: string) => {
-        if (selectedClients.length === 0) return
-
-        switch (action) {
-            case 'activate':
-                toast({
-                    title: `${selectedClients.length} clients activated`,
-                    description: "The selected clients have been activated",
-                    variant: "default"
-                })
-                break
-            case 'deactivate':
-                toast({
-                    title: `${selectedClients.length} clients deactivated`,
-                    description: "The selected clients have been deactivated",
-                    variant: "default"
-                })
-                break
-            case 'delete':
-                toast({
-                    title: `${selectedClients.length} clients deleted`,
-                    description: "The selected clients have been deleted",
-                    variant: "destructive"
-                })
-                break
-            default:
-                break
+    const handleBulkAction = async (action: string) => {
+        if (selectedClients.length === 0) {
+            toast({
+                title: "No clients selected",
+                description: "Please select at least one client to perform this action",
+                variant: "destructive"
+            })
+            return
         }
 
-        // Clear selection
+        try {
+            switch (action) {
+                case 'activate':
+                    // Update client status to ACTIVE
+                    const updatedClients = clients.map(client =>
+                        selectedClients.includes(client.id)
+                            ? { ...client, status: 'ACTIVE' }
+                            : client
+                    )
+                    setClients(updatedClients)
+                    toast({
+                        title: `${selectedClients.length} clients activated`,
+                        description: "The selected clients have been activated",
+                        variant: "default"
+                    })
+                    break
+
+                case 'deactivate':
+                    // Update client status to INACTIVE
+                    const deactivatedClients = clients.map(client =>
+                        selectedClients.includes(client.id)
+                            ? { ...client, status: 'INACTIVE' }
+                            : client
+                    )
+                    setClients(deactivatedClients)
+                    toast({
+                        title: `${selectedClients.length} clients deactivated`,
+                        description: "The selected clients have been deactivated",
+                        variant: "default"
+                    })
+                    break
+
+                case 'export':
+                    // Prepare CSV data for export
+                    const exportData = clients
+                        .filter(client => selectedClients.includes(client.id))
+                        .map(client => ({
+                            name: client.name || '',
+                            email: client.email || '',
+                            phone: client.phone || '',
+                            status: client.status || '',
+                            clientType: client.clientType || '',
+                            joinDate: client.joinDate || '',
+                            lastActive: client.lastActive || '',
+                            notes: client.notes || ''
+                        }))
+
+                    if (exportData.length === 0) {
+                        toast({
+                            title: "Export failed",
+                            description: "No data available to export",
+                            variant: "destructive"
+                        })
+                        return
+                    }
+
+                    // Convert to CSV
+                    const headers = Object.keys(exportData[0] as Record<string, string>)
+                    const csvContent = [
+                        headers.join(','),
+                        ...exportData.map(row =>
+                            headers.map(header =>
+                                JSON.stringify(row[header as keyof typeof row])
+                            ).join(',')
+                        )
+                    ].join('\n')
+
+                    // Create and trigger download
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+                    const link = document.createElement('a')
+                    link.href = URL.createObjectURL(blob)
+                    link.download = `clients_export_${new Date().toISOString().split('T')[0]}.csv`
+                    link.click()
+                    URL.revokeObjectURL(link.href)
+
+                    toast({
+                        title: "Export successful",
+                        description: `${selectedClients.length} clients exported to CSV`,
+                        variant: "default"
+                    })
+                    break
+
+                case 'assign':
+                    // Open counselor selection dialog
+                    setShowCounselorDialog(true)
+                    toast({
+                        title: "Assign clients",
+                        description: `Please select a counselor to assign ${selectedClients.length} clients`,
+                        variant: "default"
+                    })
+                    break
+
+                case 'delete':
+                    // Remove selected clients
+                    const remainingClients = clients.filter(
+                        client => !selectedClients.includes(client.id)
+                    )
+                    setClients(remainingClients)
+                    toast({
+                        title: `${selectedClients.length} clients deleted`,
+                        description: "The selected clients have been deleted",
+                        variant: "destructive"
+                    })
+                    break
+
+                default:
+                    toast({
+                        title: "Unknown action",
+                        description: "The selected action is not supported",
+                        variant: "destructive"
+                    })
+                    break
+            }
+        } catch (error) {
+            console.error('Error performing bulk action:', error)
+            toast({
+                title: "Error",
+                description: "An error occurred while performing the action",
+                variant: "destructive"
+            })
+        }
+
+        // Clear selection after action is performed
         setSelectedClients([])
         setSelectAll(false)
     }
