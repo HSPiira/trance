@@ -53,6 +53,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { BackButton } from '@/components/ui/back-button'
 
 interface Beneficiary {
     id: string;
@@ -130,14 +131,10 @@ export default function BeneficiariesContent({ client }: { client: Client }) {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/admin/clients/${client.id}`)}
-                    >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Client
-                    </Button>
+                    <BackButton
+                        href={`/admin/clients/${client.id}`}
+                        tooltip="Back to Client"
+                    />
 
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">

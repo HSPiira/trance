@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { fetchAssessmentById } from '../data'
+import { BackButton } from '@/components/ui/back-button'
 
 interface Question {
     id: string
@@ -578,14 +579,10 @@ export default function AssessmentDetailPage({ params }: { params: { id: string 
         <DashboardLayout>
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <Button
-                        variant="outline"
-                        onClick={() => router.push('/client/assessments')}
-                        className="flex items-center gap-1"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Assessments
-                    </Button>
+                    <BackButton
+                        href="/client/assessments"
+                        tooltip="Back to Assessments"
+                    />
 
                     <div className="flex items-center gap-2">
                         <Button

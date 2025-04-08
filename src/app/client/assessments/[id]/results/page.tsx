@@ -28,6 +28,7 @@ import { format, parseISO, isValid } from 'date-fns'
 import { AssessmentStatus } from '@/lib/db/schema'
 import { cn } from '@/lib/utils'
 import { fetchAssessmentById } from '../../data'
+import { BackButton } from '@/components/ui/back-button'
 
 interface Question {
     id: string
@@ -261,14 +262,10 @@ export default function AssessmentResultsPage({ params }: { params: { id: string
         return (
             <DashboardLayout>
                 <div className="space-y-6">
-                    <Button
-                        variant="outline"
-                        onClick={() => router.push('/client/assessments')}
-                        className="flex items-center gap-1"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Assessments
-                    </Button>
+                    <BackButton
+                        href="/client/assessments"
+                        tooltip="Back to Assessments"
+                    />
 
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
@@ -293,16 +290,10 @@ export default function AssessmentResultsPage({ params }: { params: { id: string
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <Button
-                        variant="outline"
-                        onClick={() => router.push('/client/assessments')}
-                        className="flex items-center gap-1"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Assessments
-                    </Button>
-                </div>
+                <BackButton
+                    href="/client/assessments"
+                    tooltip="Back to Assessments"
+                />
 
                 <Card>
                     <CardHeader>

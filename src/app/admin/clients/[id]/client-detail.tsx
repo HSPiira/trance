@@ -58,6 +58,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
+import { BackButton } from '@/components/ui/back-button'
 
 // Import from a shared definitions file to avoid duplication
 import { Dependant, Beneficiary } from '@/app/admin/clients/mock-data'
@@ -84,6 +85,9 @@ type Client = {
 interface ClientDetailProps {
     client: Client;
 }
+
+// Add the bg-grid pattern
+const bgGridPattern = `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(148 163 184 / 0.1)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e")`;
 
 export default function ClientDetail({ client }: ClientDetailProps) {
     const router = useRouter()
@@ -118,7 +122,7 @@ export default function ClientDetail({ client }: ClientDetailProps) {
     return (
         <div className="space-y-6">
             {/* Breadcrumb Navigation */}
-            <Breadcrumb className="mb-6">
+            <Breadcrumb className="mb-2">
                 <BreadcrumbList>
                     <BreadcrumbItem>
                         <BreadcrumbLink href="/admin">Dashboard</BreadcrumbLink>
@@ -134,248 +138,273 @@ export default function ClientDetail({ client }: ClientDetailProps) {
                 </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Header with Back Button */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push('/admin/clients')}
-                    >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Clients
-                    </Button>
+            {/* Hero Section with Client Info */}
+            <div className="relative overflow-hidden rounded-xl mb-6 border">
+                <div className="relative pt-6 pb-8 px-6">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-4">
+                            <BackButton
+                                href="/admin/clients"
+                                tooltip="Back to Clients"
+                                variant="secondary"
+                            />
+                            <Avatar className="h-20 w-20 border-4 border-background shadow-md">
+                                <AvatarImage src={client.avatar} />
+                                <AvatarFallback className={isCompany ? "bg-blue-100 text-blue-600 text-xl" : "bg-purple-100 text-purple-600 text-xl"}>
+                                    {client.name.charAt(0)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-3xl font-bold tracking-tight">
+                                        {client.name}
+                                    </h1>
+                                    <Badge
+                                        variant={client.status === 'ACTIVE' ? 'default' : 'destructive'}
+                                        className={client.status === 'ACTIVE' ? 'bg-green-100 text-green-700 hover:bg-green-200' : ''}
+                                    >
+                                        {client.status}
+                                    </Badge>
+                                </div>
 
-                    <h1 className="text-2xl font-bold tracking-tight">
-                        {isCompany ? (
-                            <div className="flex items-center gap-2">
-                                <Building2 className="h-6 w-6 text-blue-400" />
-                                {client.name}
+                                <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+                                    <span className="flex items-center">
+                                        {isCompany ? (
+                                            <Building2 className="h-4 w-4 mr-1 text-blue-500" />
+                                        ) : (
+                                            <User className="h-4 w-4 mr-1 text-purple-500" />
+                                        )}
+                                        {isCompany ? 'Company' : 'Individual'}
+                                    </span>
+                                    <span>•</span>
+                                    <span className="flex items-center">
+                                        <Clock className="h-4 w-4 mr-1" />
+                                        Client since {new Date(client.joinDate).toLocaleDateString('en-US', {
+                                            month: 'short',
+                                            year: 'numeric'
+                                        })}
+                                    </span>
+                                    {client.email && (
+                                        <>
+                                            <span>•</span>
+                                            <span className="flex items-center">
+                                                {client.email}
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <User className="h-6 w-6 text-purple-400" />
-                                {client.name}
-                            </div>
-                        )}
-                    </h1>
+                        </div>
 
-                    <Badge
-                        variant={client.status === 'ACTIVE' ? 'default' : 'destructive'}
-                        className={client.status === 'ACTIVE' ? 'bg-green-100 text-green-700 hover:bg-green-200' : ''}
-                    >
-                        {client.status}
-                    </Badge>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline">
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                    </Button>
-                    <Button size="sm" variant="outline">
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        Message
-                    </Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline">
-                                <MoreHorizontal className="h-4 w-4" />
+                        <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" className="shadow-sm">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                                <FileText className="mr-2 h-4 w-4" />
-                                View Counseling Notes
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete Client
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                            <Button size="sm" variant="outline" className="shadow-sm">
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                Message
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button size="sm" variant="outline" className="shadow-sm">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        View Counseling Notes
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete Client
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    </div>
+
+                    {/* Client Summary Cards with improved layout */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                        <div className="rounded-lg p-4 border shadow-sm flex items-center gap-4">
+                            <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            <div>
+                                <div className="text-muted-foreground text-sm">Sessions</div>
+                                <div className="text-2xl font-bold">{client.appointments}</div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg p-4 border shadow-sm flex items-center gap-4">
+                            <MessageSquare className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            <div>
+                                <div className="text-muted-foreground text-sm">Messages</div>
+                                <div className="text-2xl font-bold">{client.messages}</div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg p-4 border shadow-sm flex items-center gap-4">
+                            <FileText className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                            <div>
+                                <div className="text-muted-foreground text-sm">Resources</div>
+                                <div className="text-2xl font-bold">{client.resources}</div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg p-4 border shadow-sm flex items-center gap-4">
+                            <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
+                            <div>
+                                <div className="text-muted-foreground text-sm">Last Activity</div>
+                                <div className="font-bold">
+                                    {new Date(client.lastActive).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-
-            {/* Client Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <Card className="bg-gradient-to-br from-white to-slate-50">
-                    <CardContent className="p-4 flex items-center space-x-4">
-                        <div className="p-2 bg-slate-100 rounded-full">
-                            <Calendar className="h-6 w-6 text-slate-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Sessions</p>
-                            <h3 className="text-xl font-semibold tracking-tight">{client.appointments}</h3>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-white to-blue-50">
-                    <CardContent className="p-4 flex items-center space-x-4">
-                        <div className="p-2 bg-blue-100 rounded-full">
-                            <MessageSquare className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Messages</p>
-                            <h3 className="text-xl font-semibold tracking-tight">{client.messages}</h3>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-white to-purple-50">
-                    <CardContent className="p-4 flex items-center space-x-4">
-                        <div className="p-2 bg-purple-100 rounded-full">
-                            <FileText className="h-6 w-6 text-purple-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Resources</p>
-                            <h3 className="text-xl font-semibold tracking-tight">{client.resources}</h3>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-white to-green-50">
-                    <CardContent className="p-4 flex items-center space-x-4">
-                        <div className="p-2 bg-green-100 rounded-full">
-                            <Clock className="h-6 w-6 text-green-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Last Activity</p>
-                            <h3 className="text-sm font-semibold tracking-tight">
-                                {new Date(client.lastActive).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    year: 'numeric',
-                                })}
-                            </h3>
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
 
             {/* Main Content with Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-                <TabsList>
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="sessions">Sessions</TabsTrigger>
-                    <TabsTrigger value="messages">Messages</TabsTrigger>
-                    <TabsTrigger value="resources">Resources</TabsTrigger>
-                    {isCompany && (
-                        <TabsTrigger value="members">
-                            <Users className="h-4 w-4 mr-2" />
-                            Members
-                        </TabsTrigger>
-                    )}
-                    {!isCompany && (
-                        <TabsTrigger value="family">
-                            <User className="h-4 w-4 mr-2" />
-                            Family
-                        </TabsTrigger>
-                    )}
-                </TabsList>
+                <div className="border-b mb-4">
+                    <TabsList className="justify-start -mb-px">
+                        <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">Overview</TabsTrigger>
+                        <TabsTrigger value="sessions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">Sessions</TabsTrigger>
+                        <TabsTrigger value="messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">Messages</TabsTrigger>
+                        <TabsTrigger value="resources" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">Resources</TabsTrigger>
+                        {isCompany && (
+                            <TabsTrigger value="members" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                                <Users className="h-4 w-4 mr-2" />
+                                Members
+                            </TabsTrigger>
+                        )}
+                        {!isCompany && (
+                            <TabsTrigger value="family" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                                <User className="h-4 w-4 mr-2" />
+                                Family
+                            </TabsTrigger>
+                        )}
+                    </TabsList>
+                </div>
 
                 {/* Overview Tab */}
                 <TabsContent value="overview" className="space-y-6">
-                    {/* Client Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Client Information</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Full Name</h4>
-                                        <p>{client.name}</p>
+                    {/* Client Information - make it more modern */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <Card className="lg:col-span-2">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                                    <UserCircle className="h-5 w-5 text-primary" />
+                                    Client Details
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <h4 className="text-sm font-medium text-muted-foreground mb-1">Full Name</h4>
+                                            <p className="font-medium">{client.name}</p>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-medium text-muted-foreground mb-1">Email Address</h4>
+                                            <p className="font-medium">{client.email}</p>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-medium text-muted-foreground mb-1">Phone Number</h4>
+                                            <p className="font-medium">{client.phone || 'Not provided'}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Email Address</h4>
-                                        <p>{client.email}</p>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Phone Number</h4>
-                                        <p>{client.phone || 'Not provided'}</p>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Client Since</h4>
-                                        <p>{new Date(client.joinDate).toLocaleDateString('en-US', {
-                                            month: 'long',
-                                            day: 'numeric',
-                                            year: 'numeric',
-                                        })}</p>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Status</h4>
-                                        <Badge
-                                            variant="outline"
-                                            className={cn(
-                                                client.status === 'ACTIVE'
-                                                    ? "bg-green-50 text-green-700 border-green-200"
-                                                    : client.status === 'INACTIVE'
-                                                        ? "bg-slate-50 text-slate-700 border-slate-200"
-                                                        : client.status === 'PENDING'
-                                                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                                                            : "bg-red-50 text-red-700 border-red-200"
+                                    <div className="space-y-4">
+                                        <div>
+                                            <h4 className="text-sm font-medium text-muted-foreground mb-1">Client Since</h4>
+                                            <p className="font-medium">{new Date(client.joinDate).toLocaleDateString('en-US', {
+                                                month: 'long',
+                                                day: 'numeric',
+                                                year: 'numeric',
+                                            })}</p>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-medium text-muted-foreground mb-1">Status</h4>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    client.status === 'ACTIVE'
+                                                        ? "bg-green-50 text-green-700 border-green-200"
+                                                        : client.status === 'INACTIVE'
+                                                            ? "bg-slate-50 text-slate-700 border-slate-200"
+                                                            : client.status === 'PENDING'
+                                                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                                : "bg-red-50 text-red-700 border-red-200"
+                                                )}
+                                            >
+                                                {client.status}
+                                            </Badge>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-medium text-muted-foreground mb-1">Counsellor Assignment</h4>
+                                            {client.counsellor ? (
+                                                <p className="font-medium">{client.counsellor}</p>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">No counsellor assigned</p>
                                             )}
-                                        >
-                                            {client.status}
-                                        </Badge>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Counsellor Assignment</h4>
-                                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Counsellor Assignment</h4>
-                                        {client.counsellor ? (
-                                            <p>{client.counsellor}</p>
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground">No counsellor assigned</p>
-                                        )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            {client.notes && (
-                                <div className="mt-6">
-                                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Notes</h4>
-                                    <p className="text-sm whitespace-pre-line">{client.notes}</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                                {client.notes && (
+                                    <div className="mt-6 p-3 bg-muted/50 rounded-lg">
+                                        <h4 className="text-sm font-medium mb-2">Notes</h4>
+                                        <p className="text-sm whitespace-pre-line">{client.notes}</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
-                    {/* Recent Activity */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Activity</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                    <div className="mt-1 h-2 w-2 rounded-full bg-green-400" />
-                                    <div>
-                                        <p className="text-sm font-medium">Attended session</p>
-                                        <p className="text-xs text-muted-foreground">Yesterday at 2:30 PM</p>
+                        {/* Recent Activity - move to separate card */}
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                                    <Clock className="h-5 w-5 text-primary" />
+                                    Recent Activity
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-1 h-2 w-2 rounded-full bg-green-400" />
+                                        <div>
+                                            <p className="text-sm font-medium">Attended session</p>
+                                            <p className="text-xs text-muted-foreground">Yesterday at 2:30 PM</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-1 h-2 w-2 rounded-full bg-blue-400" />
+                                        <div>
+                                            <p className="text-sm font-medium">Messaged counsellor</p>
+                                            <p className="text-xs text-muted-foreground">3 days ago</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-1 h-2 w-2 rounded-full bg-purple-400" />
+                                        <div>
+                                            <p className="text-sm font-medium">Downloaded resource</p>
+                                            <p className="text-xs text-muted-foreground">Last week</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-1 h-2 w-2 rounded-full bg-amber-400" />
+                                        <div>
+                                            <p className="text-sm font-medium">Rescheduled appointment</p>
+                                            <p className="text-xs text-muted-foreground">Oct 15, 2023</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-start gap-3">
-                                    <div className="mt-1 h-2 w-2 rounded-full bg-blue-400" />
-                                    <div>
-                                        <p className="text-sm font-medium">Sent message</p>
-                                        <p className="text-xs text-muted-foreground">2 days ago at 11:15 AM</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <div className="mt-1 h-2 w-2 rounded-full bg-purple-400" />
-                                    <div>
-                                        <p className="text-sm font-medium">Booked new session</p>
-                                        <p className="text-xs text-muted-foreground">4 days ago at 9:20 AM</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </TabsContent>
 
                 {/* Sessions Tab */}

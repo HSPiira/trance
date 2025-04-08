@@ -4,8 +4,10 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth'
 import {
+    ArrowLeft,
+    Building2,
     User,
-    Heart,
+    Users,
     Search,
     Plus,
     Edit,
@@ -13,6 +15,7 @@ import {
     MoreHorizontal,
     CheckCircle2,
     XCircle,
+    Filter,
 } from 'lucide-react'
 import {
     Breadcrumb,
@@ -44,35 +47,34 @@ import {
     DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BackButton } from '@/components/ui/back-button'
 
-// Using the exact same definition as in mock-data.ts for consistency
-type Dependant = {
-    id: string;
-    name: string;
-    relation: string;
-    status: string;
-}
+// Import from mock-data
+import { Dependant, Beneficiary } from '@/app/admin/clients/mock-data'
 
 interface Client {
     id: string;
     name: string;
     email: string;
-    phone?: string;
     status: string;
     joinDate: string;
+    lastActive?: string;
     avatar?: string;
     clientType: string;
     appointments: number;
-    dependants?: Dependant[];
+    beneficiaries?: Beneficiary[];
     [key: string]: any;
 }
 
-// Client Component that takes the client data directly
-export default function ClientFamilyContent({ client }: { client: Client }) {
+// Component to display all dependants for a company client
+export default function CompanyDependantsContent({ client }: { client: Client }) {
     const router = useRouter()
     const { user } = useAuth()
     const [searchQuery, setSearchQuery] = useState('')
+    const [beneficiaryFilter, setBeneficiaryFilter] = useState('ALL')
+    const [statusFilter, setStatusFilter] = useState('ALL')
 
     // Auth check
     useEffect(() => {
@@ -85,14 +87,42 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
         return null
     }
 
-    // Get dependants
-    const dependants = client.dependants || []
+    // Get beneficiaries
+    const beneficiaries = client.beneficiaries || []
 
-    // Filter dependants based on search
-    const filteredDependants = dependants.filter((dependant: Dependant) =>
-        dependant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        dependant.relation.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    // Flatten all dependants from all beneficiaries
+    const allDependants = beneficiaries.reduce((acc: any[], beneficiary: Beneficiary) => {
+        if (beneficiary.dependants && beneficiary.dependants.length > 0) {
+            // Add beneficiary information to each dependant for context
+            const dependantsWithContext = beneficiary.dependants.map((dependant: Dependant) => ({
+                ...dependant,
+                beneficiaryId: beneficiary.id,
+                beneficiaryName: beneficiary.name,
+                department: beneficiary.department,
+                role: beneficiary.role,
+            }));
+            return [...acc, ...dependantsWithContext];
+        }
+        return acc;
+    }, []);
+
+    // Filter dependants based on search, beneficiary, and status
+    const filteredDependants = allDependants.filter((dependant: any) => {
+        const matchesSearch =
+            dependant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            dependant.relation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            dependant.beneficiaryName.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const matchesBeneficiary = beneficiaryFilter === 'ALL' || dependant.beneficiaryId === beneficiaryFilter;
+        const matchesStatus = statusFilter === 'ALL' || dependant.status === statusFilter;
+
+        return matchesSearch && matchesBeneficiary && matchesStatus;
+    });
+
+    // Get total count of dependants and count by status
+    const totalDependants = allDependants.length;
+    const activeDependants = allDependants.filter(d => d.status === 'ACTIVE').length;
+    const inactiveDependants = totalDependants - activeDependants;
 
     return (
         <div className="space-y-6">
@@ -112,7 +142,7 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
-                        <BreadcrumbPage>Family</BreadcrumbPage>
+                        <BreadcrumbPage>Dependants</BreadcrumbPage>
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>
@@ -127,17 +157,17 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
 
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                            <User className="h-6 w-6 text-purple-400" />
-                            {client.name} - Family Members
+                            <Building2 className="h-6 w-6 text-blue-400" />
+                            {client.name} - All Dependants
                         </h1>
                         <p className="text-muted-foreground">
-                            Manage family members and dependants for this client
+                            Manage all dependants across all beneficiaries for this company
                         </p>
                     </div>
                 </div>
                 <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Family Member
+                    Add Dependant
                 </Button>
             </div>
 
@@ -147,8 +177,8 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
                     <CardContent className="pt-6 px-6 pb-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground mb-1">Total Family Members</p>
-                                <div className="text-2xl font-bold">{dependants.length}</div>
+                                <p className="text-sm font-medium text-muted-foreground mb-1">Total Dependants</p>
+                                <div className="text-2xl font-bold">{totalDependants}</div>
                             </div>
                             <div className="h-12 w-12 rounded-full bg-purple-500/10 flex items-center justify-center">
                                 <User className="h-6 w-6 text-purple-500" />
@@ -160,10 +190,8 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
                     <CardContent className="pt-6 px-6 pb-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground mb-1">Active Members</p>
-                                <div className="text-2xl font-bold">
-                                    {dependants.filter((d: Dependant) => d.status === 'ACTIVE').length}
-                                </div>
+                                <p className="text-sm font-medium text-muted-foreground mb-1">Active Dependants</p>
+                                <div className="text-2xl font-bold">{activeDependants}</div>
                             </div>
                             <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
                                 <CheckCircle2 className="h-6 w-6 text-green-500" />
@@ -175,32 +203,32 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
                     <CardContent className="pt-6 px-6 pb-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground mb-1">Family Plan</p>
+                                <p className="text-sm font-medium text-muted-foreground mb-1">Beneficiaries</p>
                                 <div className="text-2xl font-bold">
-                                    {client.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                                    {beneficiaries.length}
                                 </div>
                             </div>
                             <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                                <Heart className="h-6 w-6 text-blue-500" />
+                                <Users className="h-6 w-6 text-blue-500" />
                             </div>
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Client Information Card */}
+            {/* Company Information */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Primary Client</CardTitle>
+                    <CardTitle>Company Information</CardTitle>
                     <CardDescription>
-                        Main client information and coverage details
+                        Main company details and coverage summary
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center space-x-4">
                         <Avatar className="h-16 w-16">
                             <AvatarImage src={client.avatar} />
-                            <AvatarFallback className="bg-purple-400/10 text-purple-600">
+                            <AvatarFallback className="bg-blue-400/10 text-blue-600">
                                 {client.name.split(' ').map((n: string) => n[0]).join('')}
                             </AvatarFallback>
                         </Avatar>
@@ -227,52 +255,82 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
 
                     <div className="mt-6 border p-4 rounded-lg bg-muted/40">
                         <div className="flex items-center justify-between">
-                            <h4 className="font-medium">Family Counseling Plan</h4>
+                            <h4 className="font-medium">Corporate Coverage Summary</h4>
                             <Badge variant="outline">
-                                {client.name} + {dependants.length} dependant{dependants.length !== 1 ? 's' : ''}
+                                {beneficiaries.length} beneficiaries, {totalDependants} dependants
                             </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                            This plan covers the primary client and all registered family members
+                            This corporate plan covers all registered beneficiaries and their dependants
                         </p>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Family Members Table */}
+            {/* Dependants Table */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Family Members</CardTitle>
+                    <CardTitle>All Dependants</CardTitle>
                     <CardDescription>
-                        Dependants covered under the family plan
+                        All dependants across all beneficiaries for this company
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <div className="relative flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                            <div className="relative flex-1 max-w-sm">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search family members..."
+                                    placeholder="Search dependants or beneficiaries..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-8 h-9"
                                 />
                             </div>
+
+                            <div className="flex items-center gap-2">
+                                <Select value={beneficiaryFilter} onValueChange={setBeneficiaryFilter}>
+                                    <SelectTrigger className="w-[180px] h-9">
+                                        <SelectValue placeholder="Filter by Beneficiary" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">All Beneficiaries</SelectItem>
+                                        {beneficiaries.map((beneficiary: Beneficiary) => (
+                                            <SelectItem key={beneficiary.id} value={beneficiary.id}>
+                                                {beneficiary.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-[150px] h-9">
+                                        <SelectValue placeholder="Filter by Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">All Statuses</SelectItem>
+                                        <SelectItem value="ACTIVE">Active</SelectItem>
+                                        <SelectItem value="INACTIVE">Inactive</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
+
                         <div className="rounded-md border">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="py-2 px-3">Name</TableHead>
-                                        <TableHead className="py-2 px-3 text-center">Relation</TableHead>
+                                        <TableHead className="py-2 px-3">Beneficiary</TableHead>
+                                        <TableHead className="py-2 px-3">Department/Role</TableHead>
+                                        <TableHead className="py-2 px-3">Relation</TableHead>
                                         <TableHead className="py-2 px-3 text-center">Status</TableHead>
                                         <TableHead className="text-right py-2 px-3">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredDependants.length > 0 ? (
-                                        filteredDependants.map((dependant: Dependant) => (
+                                        filteredDependants.map((dependant: any) => (
                                             <TableRow key={dependant.id}>
                                                 <TableCell className="py-1.5 px-3">
                                                     <div className="flex items-center gap-3">
@@ -281,12 +339,31 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
                                                                 {dependant.name.split(' ').map((n: string) => n[0]).join('')}
                                                             </AvatarFallback>
                                                         </Avatar>
-                                                        <div>
-                                                            <div className="font-medium text-sm">{dependant.name}</div>
-                                                        </div>
+                                                        <div className="font-medium text-sm">{dependant.name}</div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="py-1.5 px-3 text-sm text-center">{dependant.relation}</TableCell>
+                                                <TableCell className="py-1.5 px-3">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Avatar className="h-5 w-5">
+                                                            <AvatarFallback className="bg-blue-400/10 text-blue-600 text-[10px]">
+                                                                {dependant.beneficiaryName.split(' ').map((n: string) => n[0]).join('')}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="text-sm">{dependant.beneficiaryName}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="py-1.5 px-3 text-sm">
+                                                    {dependant.department && dependant.role ? (
+                                                        <span>{dependant.department} - {dependant.role}</span>
+                                                    ) : dependant.department ? (
+                                                        <span>{dependant.department}</span>
+                                                    ) : dependant.role ? (
+                                                        <span>{dependant.role}</span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">Not specified</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="py-1.5 px-3 text-sm">{dependant.relation}</TableCell>
                                                 <TableCell className="py-1.5 px-3 text-center">
                                                     <Badge
                                                         variant="outline"
@@ -310,12 +387,15 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem>Edit</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => router.push(`/admin/clients/${client.id}/beneficiaries/${dependant.beneficiaryId}`)}>
+                                                                View Beneficiary
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem>Edit Dependant</DropdownMenuItem>
                                                             <DropdownMenuItem>
                                                                 {dependant.status === "ACTIVE" ? "Deactivate" : "Activate"}
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
+                                                            <DropdownMenuItem className="text-red-600">Remove Dependant</DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -323,8 +403,25 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="h-20 text-center">
-                                                No family members found
+                                            <TableCell colSpan={6} className="h-20 text-center">
+                                                {searchQuery || beneficiaryFilter !== 'ALL' || statusFilter !== 'ALL' ? (
+                                                    <div>
+                                                        <p>No dependants found with the current filters</p>
+                                                        <Button
+                                                            variant="link"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setSearchQuery('');
+                                                                setBeneficiaryFilter('ALL');
+                                                                setStatusFilter('ALL');
+                                                            }}
+                                                        >
+                                                            Clear all filters
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <p>No dependants found for any beneficiaries</p>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -333,11 +430,11 @@ export default function ClientFamilyContent({ client }: { client: Client }) {
                         </div>
                     </div>
                 </CardContent>
-                {filteredDependants.length === 0 && !searchQuery && (
+                {filteredDependants.length === 0 && !searchQuery && beneficiaryFilter === 'ALL' && statusFilter === 'ALL' && (
                     <CardFooter className="flex justify-center p-6 border-t bg-muted/10">
                         <Button>
                             <Plus className="mr-2 h-4 w-4" />
-                            Add First Family Member
+                            Add First Dependant
                         </Button>
                     </CardFooter>
                 )}

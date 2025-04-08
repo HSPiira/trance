@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { BackButton } from '@/components/ui/back-button'
 
 export default function LoginPage() {
     const router = useRouter()
@@ -160,14 +161,14 @@ export default function LoginPage() {
                                         Register
                                     </Link>
                                 </div>
-                                <div>
-                                    <Link
+                                <div className="flex justify-center">
+                                    <BackButton
                                         href="/"
-                                        className="inline-flex items-center text-blue-600 hover:text-blue-500"
-                                    >
-                                        <ArrowLeft className="mr-1 h-4 w-4" />
-                                        Back to Home
-                                    </Link>
+                                        tooltip="Back to Home"
+                                        variant="link"
+                                        size="sm"
+                                        className="p-0 h-auto text-blue-600 hover:text-blue-500"
+                                    />
                                 </div>
                             </div>
                         </CardFooter>
