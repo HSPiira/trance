@@ -1,43 +1,50 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import {
-    Search,
-    Filter,
-    MoreVertical,
-    UserCircle,
-    Phone,
-    Calendar,
+    Download,
+    Plus,
+    FileSpreadsheet,
     CheckCircle2,
     XCircle,
-    AlertCircle,
-    UserPlus,
+    Search,
+    MoreVertical,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
+    Building2,
+    Users,
+    User,
+    Users2,
     Eye,
     Edit,
     Trash2,
     MessageSquare,
+    Calendar,
     FileText,
-    Building2,
-    Users,
-    User,
-    ChevronDown,
-    Download,
-    Plus,
+    Info,
+    UserPlus,
+    BarChart3,
+    ArrowUp,
+    ArrowDown,
+    MoreHorizontal,
+    FileJson,
+    User2,
+    AlertCircle,
+    UserCircle,
     Activity,
     Loader2,
     Upload,
     ClipboardCheck,
     UploadCloud,
-    CheckCircle,
     AlertTriangle,
-    FileSpreadsheet,
     FileUp,
-    Info,
     RefreshCw,
+    Clock,
+    Phone,
+    Filter,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -89,6 +96,9 @@ import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from '@/components/ui/use-toast'
 import Papa from 'papaparse'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
 
 // Import mock data
 import { Client, clients } from './mock-data'
@@ -201,23 +211,251 @@ export default function AdminClientsPage() {
     // New state for storing all records
     const [csvRecords, setCsvRecords] = useState<ImportRecord[]>([])
 
+    // State for sorting
+    const [sortColumn, setSortColumn] = useState<keyof Client>('name')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+    // State for quick filters
+    const [filter, setFilter] = useState<'ALL' | 'COMPANIES' | 'INDIVIDUALS' | 'ACTIVE' | 'INACTIVE' | 'RECENT'>('ALL')
+
+    // Bulk actions state
+    const [selectedClients, setSelectedClients] = useState<string[]>([])
+    const [selectAll, setSelectAll] = useState(false)
+    const [showCounselorDialog, setShowCounselorDialog] = useState(false)
+
+    const [clients, setClients] = useState<Client[]>([])
+
     useEffect(() => {
         if (!user || user.role !== 'ADMIN') {
             router.push('/unauthorized')
         }
     }, [router, user])
 
-    const filteredClients = clients.filter(client => {
-        const matchesSearch =
-            client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            client.email.toLowerCase().includes(searchQuery.toLowerCase())
+    // Filter clients based on search and filters
+    const filteredClients = useMemo(() => {
+        let result = [...clients];
 
-        const matchesStatus = statusFilter === 'ALL' || client.status === statusFilter
+        // Combine all filters into a single pass
+        result = result.filter(client => {
+            // Search filter - check multiple fields
+            if (searchQuery) {
+                const searchLower = searchQuery.toLowerCase();
+                const searchableFields = [
+                    client.name,
+                    client.email,
+                    client.phone,
+                    client.status,
+                    client.clientType
+                ].map(field => (field || '').toLowerCase());
 
-        const matchesClientType = clientTypeFilter === 'ALL' || client.clientType === clientTypeFilter
+                if (!searchableFields.some(field => field.includes(searchLower))) {
+                    return false;
+                }
+            }
 
-        return matchesSearch && matchesStatus && matchesClientType
-    })
+            // Status filter
+            if (statusFilter !== "ALL" && client.status !== statusFilter) {
+                return false;
+            }
+
+            // Client type filter
+            if (clientTypeFilter !== "ALL" && client.clientType !== clientTypeFilter) {
+                return false;
+            }
+
+            // Quick filter
+            switch (filter) {
+                case 'COMPANIES':
+                    if (client.clientType !== 'COMPANY') return false;
+                    break;
+                case 'INDIVIDUALS':
+                    if (client.clientType !== 'INDIVIDUAL') return false;
+                    break;
+                case 'ACTIVE':
+                    if (client.status !== 'ACTIVE') return false;
+                    break;
+                case 'INACTIVE':
+                    if (client.status !== 'INACTIVE') return false;
+                    break;
+                case 'RECENT':
+                    try {
+                        const lastActive = new Date(client.lastActive);
+                        if (isNaN(lastActive.getTime())) return false;
+
+                        const now = new Date();
+                        const diffDays = Math.ceil((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
+                        if (diffDays > 30) return false;
+                    } catch (error) {
+                        return false;
+                    }
+                    break;
+            }
+
+            return true;
+        });
+
+        return result;
+    }, [clients, searchQuery, statusFilter, clientTypeFilter, filter]);
+
+    // Handle bulk selection
+    const toggleSelectAll = () => {
+        if (selectAll) {
+            setSelectedClients([])
+        } else {
+            setSelectedClients(filteredClients.map(client => client.id))
+        }
+        setSelectAll(!selectAll)
+    }
+
+    const toggleClientSelection = (id: string) => {
+        if (selectedClients.includes(id)) {
+            setSelectedClients(selectedClients.filter(clientId => clientId !== id))
+            setSelectAll(false)
+        } else {
+            setSelectedClients([...selectedClients, id])
+            // If all clients are now selected, update selectAll state
+            if (selectedClients.length + 1 === filteredClients.length) {
+                setSelectAll(true)
+            }
+        }
+    }
+
+    const handleBulkAction = async (action: string) => {
+        if (selectedClients.length === 0) {
+            toast({
+                title: "No clients selected",
+                description: "Please select at least one client to perform this action",
+                variant: "destructive"
+            })
+            return
+        }
+
+        try {
+            switch (action) {
+                case 'activate':
+                    // Update client status to ACTIVE
+                    const updatedClients = clients.map(client =>
+                        selectedClients.includes(client.id)
+                            ? { ...client, status: 'ACTIVE' }
+                            : client
+                    )
+                    setClients(updatedClients)
+                    toast({
+                        title: `${selectedClients.length} clients activated`,
+                        description: "The selected clients have been activated",
+                        variant: "default"
+                    })
+                    break
+
+                case 'deactivate':
+                    // Update client status to INACTIVE
+                    const deactivatedClients = clients.map(client =>
+                        selectedClients.includes(client.id)
+                            ? { ...client, status: 'INACTIVE' }
+                            : client
+                    )
+                    setClients(deactivatedClients)
+                    toast({
+                        title: `${selectedClients.length} clients deactivated`,
+                        description: "The selected clients have been deactivated",
+                        variant: "default"
+                    })
+                    break
+
+                case 'export':
+                    // Prepare CSV data for export
+                    const exportData = clients
+                        .filter(client => selectedClients.includes(client.id))
+                        .map(client => ({
+                            name: client.name || '',
+                            email: client.email || '',
+                            phone: client.phone || '',
+                            status: client.status || '',
+                            clientType: client.clientType || '',
+                            joinDate: client.joinDate || '',
+                            lastActive: client.lastActive || '',
+                            notes: client.notes || ''
+                        }))
+
+                    if (exportData.length === 0) {
+                        toast({
+                            title: "Export failed",
+                            description: "No data available to export",
+                            variant: "destructive"
+                        })
+                        return
+                    }
+
+                    // Convert to CSV
+                    const headers = Object.keys(exportData[0] as Record<string, string>)
+                    const csvContent = [
+                        headers.join(','),
+                        ...exportData.map(row =>
+                            headers.map(header =>
+                                JSON.stringify(row[header as keyof typeof row])
+                            ).join(',')
+                        )
+                    ].join('\n')
+
+                    // Create and trigger download
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+                    const link = document.createElement('a')
+                    link.href = URL.createObjectURL(blob)
+                    link.download = `clients_export_${new Date().toISOString().split('T')[0]}.csv`
+                    link.click()
+                    URL.revokeObjectURL(link.href)
+
+                    toast({
+                        title: "Export successful",
+                        description: `${selectedClients.length} clients exported to CSV`,
+                        variant: "default"
+                    })
+                    break
+
+                case 'assign':
+                    // Open counselor selection dialog
+                    setShowCounselorDialog(true)
+                    toast({
+                        title: "Assign clients",
+                        description: `Please select a counselor to assign ${selectedClients.length} clients`,
+                        variant: "default"
+                    })
+                    break
+
+                case 'delete':
+                    // Remove selected clients
+                    const remainingClients = clients.filter(
+                        client => !selectedClients.includes(client.id)
+                    )
+                    setClients(remainingClients)
+                    toast({
+                        title: `${selectedClients.length} clients deleted`,
+                        description: "The selected clients have been deleted",
+                        variant: "destructive"
+                    })
+                    break
+
+                default:
+                    toast({
+                        title: "Unknown action",
+                        description: "The selected action is not supported",
+                        variant: "destructive"
+                    })
+                    break
+            }
+        } catch (error) {
+            console.error('Error performing bulk action:', error)
+            toast({
+                title: "Error",
+                description: "An error occurred while performing the action",
+                variant: "destructive"
+            })
+        }
+
+        // Clear selection after action is performed
+        setSelectedClients([])
+        setSelectAll(false)
+    }
 
     // Pagination
     const totalPages = Math.ceil(filteredClients.length / itemsPerPage)
@@ -771,41 +1009,6 @@ DEPENDANT,C002,DP002,Lucy Solo,,,ACTIVE,,,,,,CL002,Daughter,,`;
                         Manage client accounts and view client information
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-9 w-9"
-                                    onClick={() => setIsImportDialogOpen(true)}
-                                >
-                                    <Download className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Import Clients</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    size="icon"
-                                    className="h-9 w-9"
-                                    onClick={() => setIsAddClientDialogOpen(true)}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Add Client</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </div>
             </div>
 
             {/* Client Import Dialog */}
@@ -868,15 +1071,25 @@ DEPENDANT,C002,DP002,Lucy Solo,,,ACTIVE,,,,,,CL002,Daughter,,`;
                                 )}
                             </DialogDescription>
                         </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-3"
-                            onClick={downloadTemplate}
-                        >
-                            <Download className="h-3.5 w-3.5 mr-1.5" />
-                            Download Template
-                        </Button>
+                        <div className="flex items-center h-9">
+                            <TooltipProvider>
+                                <Tooltip delayDuration={150}>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full"
+                                            onClick={downloadTemplate}
+                                        >
+                                            <Download className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" align="end" sideOffset={5}>
+                                        Download Template
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
                     </DialogHeader>
 
                     <div className="flex items-center justify-between px-1 mb-4">
@@ -1127,14 +1340,14 @@ DEPENDANT,C002,DP002,Lucy Solo,,,ACTIVE,,,,,,CL002,Daughter,,`;
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                            {previewData.map((row, rowIndex) => (
+                                                            {previewData.map((record, rowIndex) => (
                                                                 <TableRow
                                                                     key={rowIndex}
                                                                     className={rowErrors[rowIndex]
                                                                         ? "bg-red-50 dark:bg-red-900/20 hover:bg-red-100/70 dark:hover:bg-red-900/30"
                                                                         : (rowIndex % 2 === 0 ? "bg-white dark:bg-transparent" : "bg-gray-50/50 dark:bg-gray-900/20")}
                                                                 >
-                                                                    {headerRow.map((header, cellIndex) => {
+                                                                    {headerRow.map((header, colIndex) => {
                                                                         // Check if this cell has an error
                                                                         const errorInCell = rowErrors[rowIndex]?.some(err =>
                                                                             err.includes(`"${header}"`) ||
@@ -1142,20 +1355,20 @@ DEPENDANT,C002,DP002,Lucy Solo,,,ACTIVE,,,,,,CL002,Daughter,,`;
                                                                         );
 
                                                                         // For type checking
-                                                                        const recordType = row['recordType'];
+                                                                        const recordType = record['recordType'];
                                                                         const requiredForThisType = recordType && requiredFields[recordType] ?
                                                                             requiredFields[recordType] : [];
                                                                         const isRequired = requiredForThisType.includes(header);
-                                                                        const isEmpty = !row[header];
+                                                                        const isEmpty = !record[header];
 
                                                                         return (
                                                                             <TableCell
-                                                                                key={cellIndex}
+                                                                                key={colIndex}
                                                                                 className={`py-1 px-2 text-xs whitespace-nowrap ${errorInCell ? "text-red-600 dark:text-red-400 font-medium" : ""
                                                                                     } ${isRequired && isEmpty ? "bg-red-100 dark:bg-red-900/30" : ""
                                                                                     }`}
                                                                             >
-                                                                                {row[header]}
+                                                                                {record[header]}
                                                                                 {isRequired && isEmpty && (
                                                                                     <span className="text-red-500 ml-1">
                                                                                         (Required)
@@ -1255,13 +1468,42 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                            {previewData.map((row, rowIndex) => (
+                                                            {previewData.map((record, rowIndex) => (
                                                                 <TableRow key={rowIndex}>
-                                                                    {headerRow.map((header, cellIndex) => (
-                                                                        <TableCell key={cellIndex} className="py-1 px-2 text-xs whitespace-nowrap">
-                                                                            {row[header]}
-                                                                        </TableCell>
-                                                                    ))}
+                                                                    {headerRow.map((header, colIndex) => {
+                                                                        // Add special handling for the name column
+                                                                        if (header === 'name' || fieldMapping[colIndex] === 'name') {
+                                                                            return (
+                                                                                <TableCell key={colIndex} className={cn(
+                                                                                    "py-1 px-2 text-xs",
+                                                                                    rowErrors[rowIndex]?.includes(header) ? "bg-red-50 text-red-600 dark:bg-red-900/20" : ""
+                                                                                )}>
+                                                                                    <div
+                                                                                        className="cursor-pointer select-none"
+                                                                                        onDoubleClick={() => {
+                                                                                            // Only navigate if this is an existing client with an ID
+                                                                                            if (record.id) {
+                                                                                                router.push(`/admin/clients/${record.id}`);
+                                                                                            }
+                                                                                        }}
+                                                                                        title={record.id ? "Double-click to view client details" : ""}
+                                                                                    >
+                                                                                        {record[header] || ''}
+                                                                                    </div>
+                                                                                </TableCell>
+                                                                            );
+                                                                        }
+
+                                                                        // For other columns, keep the original rendering
+                                                                        return (
+                                                                            <TableCell key={colIndex} className={cn(
+                                                                                "py-1 px-2 text-xs",
+                                                                                rowErrors[rowIndex]?.includes(header) ? "bg-red-50 text-red-600 dark:bg-red-900/20" : ""
+                                                                            )}>
+                                                                                {record[header] || ''}
+                                                                            </TableCell>
+                                                                        );
+                                                                    })}
                                                                 </TableRow>
                                                             ))}
                                                         </TableBody>
@@ -1303,7 +1545,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                     <DialogTitle className="text-xl flex items-center gap-2">
                                         {importResults.errors === 0 ? (
                                             <>
-                                                <CheckCircle className="h-5 w-5 text-green-500" />
+                                                <CheckCircle2 className="h-5 w-5 text-green-500" />
                                                 Ready to Import
                                             </>
                                         ) : (
@@ -1351,7 +1593,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                             <div className="flex justify-center mb-4">
                                 {importResults.errors === 0 ? (
                                     <div className="h-20 w-20 rounded-full bg-gradient-to-br from-green-400/20 to-green-600/5 flex items-center justify-center">
-                                        <CheckCircle className="h-16 w-16 text-green-500" />
+                                        <CheckCircle2 className="h-16 w-16 text-green-500" />
                                     </div>
                                 ) : (
                                     <div className="h-20 w-20 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/5 flex items-center justify-center">
@@ -1411,7 +1653,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
             </Dialog>
 
             {/* Client Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <Card className="bg-gradient-to-br from-background via-background/95 to-blue-500/5 border-blue-500/10 overflow-hidden">
                     <CardContent className="p-5">
                         <div className="flex">
@@ -1628,84 +1870,359 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                 </Card>
             </div>
 
-            {/* Main Content Area */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Client Management</CardTitle>
-                    <CardDescription>
-                        View and manage all client accounts
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <div className="flex-1">
-                                <Input
-                                    placeholder="Search clients..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="h-8"
-                                />
-                            </div>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[150px] h-8">
-                                    <SelectValue placeholder="Filter by status" />
+            {/* Filter Pills */}
+            <div className="flex flex-wrap gap-2 mb-4">
+                <Button
+                    variant={filter === 'ALL' ? "default" : "outline"}
+                    size="sm"
+                    className={`h-8 px-3 rounded-full ${filter === 'ALL' ? "shadow-sm" : ""}`}
+                    onClick={() => setFilter('ALL')}
+                >
+                    All Clients
+                    <Badge variant="secondary" className="ml-2 rounded-full px-1.5 py-0.5">
+                        {clients.length}
+                    </Badge>
+                </Button>
+                <Button
+                    variant={filter === 'COMPANIES' ? "default" : "outline"}
+                    size="sm"
+                    className={`h-8 px-3 rounded-full ${filter === 'COMPANIES' ? "shadow-sm" : ""}`}
+                    onClick={() => setFilter('COMPANIES')}
+                >
+                    Companies
+                    <Badge variant="secondary" className="ml-2 rounded-full px-1.5 py-0.5">
+                        {clients.filter(c => c.clientType === 'COMPANY').length}
+                    </Badge>
+                </Button>
+                <Button
+                    variant={filter === 'INDIVIDUALS' ? "default" : "outline"}
+                    size="sm"
+                    className={`h-8 px-3 rounded-full ${filter === 'INDIVIDUALS' ? "shadow-sm" : ""}`}
+                    onClick={() => setFilter('INDIVIDUALS')}
+                >
+                    Individuals
+                    <Badge variant="secondary" className="ml-2 rounded-full px-1.5 py-0.5">
+                        {clients.filter(c => c.clientType === 'INDIVIDUAL').length}
+                    </Badge>
+                </Button>
+                <Button
+                    variant={filter === 'ACTIVE' ? "default" : "outline"}
+                    size="sm"
+                    className={`h-8 px-3 rounded-full ${filter === 'ACTIVE' ? "shadow-sm" : ""}`}
+                    onClick={() => setFilter('ACTIVE')}
+                >
+                    Active
+                    <Badge variant="secondary" className="ml-2 rounded-full px-1.5 py-0.5">
+                        {clients.filter(c => c.status === 'ACTIVE').length}
+                    </Badge>
+                </Button>
+                <Button
+                    variant={filter === 'INACTIVE' ? "default" : "outline"}
+                    size="sm"
+                    className={`h-8 px-3 rounded-full ${filter === 'INACTIVE' ? "shadow-sm" : ""}`}
+                    onClick={() => setFilter('INACTIVE')}
+                >
+                    Inactive
+                    <Badge variant="secondary" className="ml-2 rounded-full px-1.5 py-0.5">
+                        {clients.filter(c => c.status === 'INACTIVE').length}
+                    </Badge>
+                </Button>
+                <Button
+                    variant={filter === 'RECENT' ? "default" : "outline"}
+                    size="sm"
+                    className={`h-8 px-3 rounded-full ${filter === 'RECENT' ? "shadow-sm" : ""}`}
+                    onClick={() => setFilter('RECENT')}
+                >
+                    Recent
+                    <Badge variant="secondary" className="ml-2 rounded-full px-1.5 py-0.5">
+                        {clients.filter(c => {
+                            const lastActive = new Date(c.lastActive);
+                            const now = new Date();
+                            const diffDays = Math.ceil((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
+                            return diffDays <= 30;
+                        }).length}
+                    </Badge>
+                </Button>
+            </div>
+
+            {/* Advanced Search Accordion */}
+            <Collapsible className="mb-4">
+                <CollapsibleTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs rounded-full flex items-center gap-1"
+                    >
+                        <Search className="h-3 w-3" />
+                        <span>Advanced Search</span>
+                        <ChevronDown className="h-3 w-3" />
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 border rounded-md p-3 bg-card">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                            <Label htmlFor="client-type" className="text-xs">Client Type</Label>
+                            <Select>
+                                <SelectTrigger id="client-type" className="h-8 text-xs">
+                                    <SelectValue placeholder="All Types" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="ALL">All Status</SelectItem>
-                                    <SelectItem value="ACTIVE">Active</SelectItem>
-                                    <SelectItem value="INACTIVE">Inactive</SelectItem>
-                                    <SelectItem value="SUSPENDED">Suspended</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={clientTypeFilter} onValueChange={setClientTypeFilter}>
-                                <SelectTrigger className="w-[150px] h-8">
-                                    <SelectValue placeholder="Filter by type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">All Types</SelectItem>
-                                    <SelectItem value="COMPANY">Companies</SelectItem>
-                                    <SelectItem value="INDIVIDUAL">Individuals</SelectItem>
+                                    <SelectItem value="all">All Types</SelectItem>
+                                    <SelectItem value="company">Companies</SelectItem>
+                                    <SelectItem value="individual">Individuals</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="status" className="text-xs">Status</Label>
+                            <Select>
+                                <SelectTrigger id="status" className="h-8 text-xs">
+                                    <SelectValue placeholder="Any Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Any Status</SelectItem>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="inactive">Inactive</SelectItem>
+                                    <SelectItem value="suspended">Suspended</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="counsellor" className="text-xs">Counsellor</Label>
+                            <Select>
+                                <SelectTrigger id="counsellor" className="h-8 text-xs">
+                                    <SelectValue placeholder="Any Counsellor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Any Counsellor</SelectItem>
+                                    <SelectItem value="john">John Doe</SelectItem>
+                                    <SelectItem value="mary">Mary Anne</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="join-date" className="text-xs">Join Date</Label>
+                            <Select>
+                                <SelectTrigger id="join-date" className="h-8 text-xs">
+                                    <SelectValue placeholder="Any Time" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Any Time</SelectItem>
+                                    <SelectItem value="30days">Last 30 Days</SelectItem>
+                                    <SelectItem value="60days">Last 60 Days</SelectItem>
+                                    <SelectItem value="90days">Last 90 Days</SelectItem>
+                                    <SelectItem value="custom">Custom Range</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="last-active" className="text-xs">Last Active</Label>
+                            <Select>
+                                <SelectTrigger id="last-active" className="h-8 text-xs">
+                                    <SelectValue placeholder="Any Time" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Any Time</SelectItem>
+                                    <SelectItem value="7days">Last 7 Days</SelectItem>
+                                    <SelectItem value="30days">Last 30 Days</SelectItem>
+                                    <SelectItem value="inactive">Inactive 30+ Days</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="search-term" className="text-xs">Search Term</Label>
+                            <Input id="search-term" placeholder="Name, email, phone..." className="h-8 text-xs" />
+                        </div>
+                    </div>
+                    <div className="flex justify-end mt-3 gap-2">
+                        <Button variant="outline" size="sm" className="h-7 text-xs">Reset</Button>
+                        <Button size="sm" className="h-7 text-xs">Apply Filters</Button>
+                    </div>
+                </CollapsibleContent>
+            </Collapsible>
+
+            {/* Bulk Actions */}
+            {selectedClients.length > 0 && (
+                <div className="flex justify-between items-center">
+                    <div className="text-gray-500 text-sm">
+                        {selectedClients.length} clients selected
+                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="default" size="sm" className="h-8 px-3 gap-1 rounded-full shadow-sm">
+                                Bulk Actions
+                                <ChevronDown className="h-3.5 w-3.5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => handleBulkAction('activate')} className="flex items-center gap-2 cursor-pointer">
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                <span>Activate Clients</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleBulkAction('deactivate')} className="flex items-center gap-2 cursor-pointer">
+                                <XCircle className="h-4 w-4 text-amber-500" />
+                                <span>Deactivate Clients</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleBulkAction('export')} className="flex items-center gap-2 cursor-pointer">
+                                <Download className="h-4 w-4 text-blue-500" />
+                                <span>Export Selected</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleBulkAction('assign')} className="flex items-center gap-2 cursor-pointer">
+                                <UserPlus className="h-4 w-4 text-purple-500" />
+                                <span>Assign Counsellor</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleBulkAction('delete')} className="text-destructive flex items-center gap-2 cursor-pointer">
+                                <Trash2 className="h-4 w-4" />
+                                <span>Delete Clients</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            )}
+
+            {/* Main Content Area */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <Card className="lg:col-span-3">
+                    <CardHeader className="py-3">
+                        <div className="flex justify-between items-center">
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search clients..."
+                                    className="w-[220px] pl-8 h-9"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-[130px] h-9">
+                                        <SelectValue placeholder="All Statuses" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">All Statuses</SelectItem>
+                                        <SelectItem value="ACTIVE">Active</SelectItem>
+                                        <SelectItem value="INACTIVE">Inactive</SelectItem>
+                                        <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Select value={clientTypeFilter} onValueChange={setClientTypeFilter}>
+                                    <SelectTrigger className="w-[130px] h-9">
+                                        <SelectValue placeholder="All Types" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">All Types</SelectItem>
+                                        <SelectItem value="COMPANY">Companies</SelectItem>
+                                        <SelectItem value="INDIVIDUAL">Individuals</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-9 w-9 rounded-full"
+                                                onClick={() => setIsImportDialogOpen(true)}
+                                            >
+                                                <Download className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Import Clients</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                size="icon"
+                                                className="h-9 w-9 rounded-full"
+                                                onClick={() => setIsAddClientDialogOpen(true)}
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Add Client</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-0 pb-4">
                         <div className="rounded-md border">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="hover:bg-transparent">
-                                        <TableHead className="w-[240px] py-2 px-3">Name</TableHead>
-                                        <TableHead className="w-[60px] py-2 px-3 text-center">Type</TableHead>
-                                        <TableHead className="w-[200px] py-2 px-3">Email</TableHead>
-                                        <TableHead className="w-[90px] py-2 px-3 text-center">Sessions</TableHead>
-                                        <TableHead className="w-[100px] py-2 px-3 text-center">Beneficiaries</TableHead>
-                                        <TableHead className="w-[60px] py-2 px-3 text-center">Status</TableHead>
-                                        <TableHead className="w-[60px] py-2 px-3">Actions</TableHead>
+                                    <TableRow>
+                                        <TableHead className="w-10">
+                                            <div className="flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectAll}
+                                                    onChange={toggleSelectAll}
+                                                    className="h-4 w-4 rounded"
+                                                />
+                                            </div>
+                                        </TableHead>
+                                        <TableHead className="w-[180px] py-2 px-2">Name</TableHead>
+                                        <TableHead className="w-[40px] py-2 px-1 text-center">Type</TableHead>
+                                        <TableHead className="w-[180px] py-2 px-2">Email</TableHead>
+                                        <TableHead className="w-[50px] py-2 px-1 text-center">Sessions</TableHead>
+                                        <TableHead className="w-[80px] py-2 px-1 text-center">Beneficiaries</TableHead>
+                                        <TableHead className="w-[40px] py-2 px-1 text-center">Status</TableHead>
+                                        <TableHead className="w-[50px] py-2 px-1">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {paginatedClients.map((client) => (
                                         <TableRow key={client.id}>
-                                            <TableCell className="py-1.5 px-3">
-                                                <div className="flex items-center gap-2">
-                                                    <Avatar className="h-6 w-6">
-                                                        <AvatarImage src={client.avatar} />
-                                                        <AvatarFallback className="text-[10px]">
-                                                            {client.name.split(' ').map((n: string) => n[0]).join('')}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="text-sm whitespace-nowrap">{client.name}</span>
+                                            <TableCell className="py-1 px-2">
+                                                <div className="flex items-center justify-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedClients.includes(client.id)}
+                                                        onChange={() => toggleClientSelection(client.id)}
+                                                        className="h-4 w-4 rounded"
+                                                    />
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="py-1.5 px-3 text-center">
+                                            <TableCell className="py-1 px-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="h-7 w-7">
+                                                        <AvatarImage src="" />
+                                                        <AvatarFallback className={client.clientType === 'COMPANY' ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"}>
+                                                            {client.name.charAt(0)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="min-w-0 flex flex-col">
+                                                        <div
+                                                            className="font-medium truncate max-w-[120px] cursor-pointer select-none"
+                                                            onDoubleClick={() => router.push(`/admin/clients/${client.id}`)}
+                                                            title="Double-click to view client details"
+                                                        >
+                                                            {client.name}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-1 px-1 text-center">
                                                 {getClientTypeIcon(client.clientType)}
                                             </TableCell>
-                                            <TableCell className="py-1.5 px-3">
+                                            <TableCell className="py-1 px-2">
                                                 <span className="text-sm whitespace-nowrap">{client.email}</span>
                                             </TableCell>
-                                            <TableCell className="py-1.5 px-3 text-center">
+                                            <TableCell className="py-1 px-1 text-center">
                                                 <span className="text-xs font-normal">{client.appointments}</span>
                                             </TableCell>
-                                            <TableCell className="py-1.5 px-3 text-center">
+                                            <TableCell className="py-1 px-1 text-center">
                                                 {client.clientType === 'COMPANY' ? (
                                                     <div className="flex items-center justify-center gap-1">
                                                         <TooltipProvider>
@@ -1732,7 +2249,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                                                     <Tooltip>
                                                                         <TooltipTrigger asChild>
                                                                             <Link
-                                                                                href={`/admin/clients/${client.id}/dependants`}
+                                                                                href={`/admin/clients/${client.id}/${client.clientType === 'COMPANY' ? 'company-dependants' : 'dependants'}`}
                                                                                 className="text-purple-600 text-xs flex items-center hover:underline"
                                                                             >
                                                                                 <User className="h-3.5 w-3.5" />
@@ -1772,37 +2289,37 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                                     </div>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="py-1.5 px-3 text-center">
+                                            <TableCell className="py-1 px-1 text-center">
                                                 {getStatusIcon(client.status)}
                                             </TableCell>
-                                            <TableCell className="py-1.5 px-3">
+                                            <TableCell className="py-1 px-1">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-7 w-7 p-0">
-                                                            <MoreVertical className="h-4 w-4" />
+                                                        <Button variant="ghost" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                                                            <MoreVertical className="h-3.5 w-3.5" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => router.push(`/admin/clients/${client.id}`)}>
-                                                            <Eye className="mr-2 h-4 w-4" />
-                                                            View Profile
+                                                    <DropdownMenuContent align="end" className="w-[160px]">
+                                                        <DropdownMenuItem onClick={() => router.push(`/admin/clients/${client.id}`)} className="cursor-pointer">
+                                                            <Eye className="mr-2 h-3.5 w-3.5 text-blue-500" />
+                                                            <span className="text-xs">View Profile</span>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem>
-                                                            <Edit className="mr-2 h-4 w-4" />
-                                                            Edit
+                                                        <DropdownMenuItem className="cursor-pointer">
+                                                            <Edit className="mr-2 h-3.5 w-3.5 text-amber-500" />
+                                                            <span className="text-xs">Edit</span>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem>
-                                                            <MessageSquare className="mr-2 h-4 w-4" />
-                                                            Message
+                                                        <DropdownMenuItem className="cursor-pointer">
+                                                            <MessageSquare className="mr-2 h-3.5 w-3.5 text-indigo-500" />
+                                                            <span className="text-xs">Message</span>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem>
-                                                            <FileText className="mr-2 h-4 w-4" />
-                                                            Notes
+                                                        <DropdownMenuItem className="cursor-pointer">
+                                                            <FileText className="mr-2 h-3.5 w-3.5 text-green-500" />
+                                                            <span className="text-xs">Notes</span>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem className="text-destructive">
-                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                            Delete
+                                                        <DropdownMenuItem className="text-destructive cursor-pointer">
+                                                            <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                            <span className="text-xs">Delete</span>
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -1812,15 +2329,15 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                 </TableBody>
                             </Table>
                         </div>
-                        <div className="flex items-center justify-between mt-4 text-sm">
-                            <div className="text-muted-foreground">
+                        <div className="flex items-center justify-between mt-2 px-4 text-sm">
+                            <div className="text-muted-foreground text-xs">
                                 Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredClients.length)} of {filteredClients.length} clients
                             </div>
                             <div className="flex items-center gap-1">
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-7 w-7 p-0"
+                                    className="h-7 w-7 p-0 rounded-full"
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
                                 >
@@ -1842,7 +2359,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                             key={pageNumber}
                                             variant={currentPage === pageNumber ? "default" : "outline"}
                                             size="sm"
-                                            className="h-7 w-7 p-0"
+                                            className={`h-7 w-7 p-0 text-xs ${currentPage === pageNumber ? "shadow-sm" : "hover:bg-slate-50 dark:hover:bg-slate-800"}`}
                                             onClick={() => handlePageChange(pageNumber)}
                                         >
                                             {pageNumber}
@@ -1852,7 +2369,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-7 w-7 p-0"
+                                    className="h-7 w-7 p-0 rounded-full"
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages}
                                 >
@@ -1860,7 +2377,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                 </Button>
                             </div>
                             <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(parseInt(value))}>
-                                <SelectTrigger className="w-[110px] h-7">
+                                <SelectTrigger className="w-[100px] h-7 text-xs">
                                     <SelectValue placeholder="Rows per page" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1871,9 +2388,539 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                 </SelectContent>
                             </Select>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </div >
+                    </CardContent>
+                </Card>
+
+                {/* Recent Activity Card */}
+                <Card className="lg:col-span-1">
+                    <CardHeader className="py-3 px-4">
+                        <div className="flex justify-between items-center">
+                            <CardTitle className="text-sm">Recent Activity</CardTitle>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <CardDescription className="text-xs">Client interactions & updates</CardDescription>
+                    </CardHeader>
+                    <CardContent className="px-4 py-0">
+                        <div className="space-y-4">
+                            {/* Activity Item 1 */}
+                            <div className="flex gap-2">
+                                <div className="relative mt-0.5">
+                                    <div className="flex items-center justify-center h-7 w-7 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                                        <MessageSquare className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div className="absolute top-7 bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-border"></div>
+                                </div>
+                                <div className="space-y-0.5 flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-medium">Session Completed</p>
+                                        <p className="text-[10px] text-muted-foreground">2h ago</p>
+                                    </div>
+                                    <p className="text-xs truncate">
+                                        <span className="font-medium text-blue-600 dark:text-blue-400">ACME Corp</span> completed a session with <span className="font-medium">John</span>
+                                    </p>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">Company</Badge>
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800">45 min</Badge>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Activity Item 2 */}
+                            <div className="flex gap-2">
+                                <div className="relative mt-0.5">
+                                    <div className="flex items-center justify-center h-7 w-7 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                                        <UserPlus className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                    <div className="absolute top-7 bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-border"></div>
+                                </div>
+                                <div className="space-y-0.5 flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-medium">New Beneficiary</p>
+                                        <p className="text-[10px] text-muted-foreground">Yesterday</p>
+                                    </div>
+                                    <p className="text-xs truncate">
+                                        <span className="font-medium text-blue-600 dark:text-blue-400">TechStart Inc</span> added <span className="font-medium">Sarah</span>
+                                    </p>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">Company</Badge>
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">HR</Badge>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Activity Item 3 */}
+                            <div className="flex gap-2">
+                                <div className="relative mt-0.5">
+                                    <div className="flex items-center justify-center h-7 w-7 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                                        <Calendar className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                                    </div>
+                                    <div className="absolute top-7 bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-border"></div>
+                                </div>
+                                <div className="space-y-0.5 flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-medium">Session Scheduled</p>
+                                        <p className="text-[10px] text-muted-foreground">2d ago</p>
+                                    </div>
+                                    <p className="text-xs truncate">
+                                        <span className="font-medium text-purple-600 dark:text-purple-400">Peter Solo</span> scheduled a session
+                                    </p>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800">Individual</Badge>
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">May 27</Badge>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Activity Item 4 */}
+                            <div className="flex gap-2">
+                                <div className="relative mt-0.5">
+                                    <div className="flex items-center justify-center h-7 w-7 rounded-full bg-green-100 dark:bg-green-900/30">
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <div className="absolute top-7 bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-border h-0"></div>
+                                </div>
+                                <div className="space-y-0.5 flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-medium">Client Activated</p>
+                                        <p className="text-[10px] text-muted-foreground">3d ago</p>
+                                    </div>
+                                    <p className="text-xs truncate">
+                                        <span className="font-medium text-blue-600 dark:text-blue-400">Global Services Ltd</span> activated
+                                    </p>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">Company</Badge>
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800">Active</Badge>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-3 pt-2 border-t text-center">
+                            <Button variant="link" size="sm" className="text-[10px] h-auto p-0">
+                                View all activity <ChevronRight className="h-3 w-3 ml-1" />
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Additional Analytics & Features Section */}
+            <div className="mt-6 space-y-5">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-medium tracking-tight">Analytics & Insights</h2>
+                    <Select defaultValue="30">
+                        <SelectTrigger className="w-[120px] h-7">
+                            <SelectValue placeholder="Time period" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="7">Last 7 days</SelectItem>
+                            <SelectItem value="30">Last 30 days</SelectItem>
+                            <SelectItem value="90">Last 90 days</SelectItem>
+                            <SelectItem value="365">Last year</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {/* Client Engagement Analytics */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm">Client Engagement</CardTitle>
+                                <div className="flex items-center gap-2">
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 p-0 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                                                    <Info className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p className="text-xs">Client engagement metrics based on recent activity</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                    <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded-full">
+                                        <RefreshCw className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-2">
+                            <div className="h-[180px] w-full relative">
+                                {/* Interactive Chart */}
+                                <div className="w-full h-full rounded-md bg-gradient-to-b from-transparent to-blue-50 dark:to-blue-950/20 overflow-hidden">
+                                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-4">
+                                        {Array.from({ length: 7 }).map((_, index) => {
+                                            // Create varied heights for chart bars
+                                            const height = 30 + Math.floor(Math.random() * 120);
+                                            return (
+                                                <div key={index} className="flex flex-col items-center">
+                                                    <div
+                                                        className={`w-8 bg-gradient-to-t from-blue-500 to-blue-400 dark:from-blue-600 dark:to-blue-500 rounded-t transition-all duration-500 hover:from-blue-600 hover:to-blue-500 cursor-pointer group relative`}
+                                                        style={{ height: `${height}px` }}
+                                                    >
+                                                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-[10px] py-0.5 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                                            {height > 100 ? 'High engagement' : height > 70 ? 'Medium engagement' : 'Low engagement'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-[9px] text-muted-foreground mt-1">
+                                                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index]}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 mt-4">
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-muted-foreground">Session Attendance</p>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0">
+                                                        <Info className="h-3 w-3 text-muted-foreground" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="right">
+                                                    <p className="text-xs">Percentage of scheduled sessions attended</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
+                                    <p className="text-lg font-semibold">82%</p>
+                                    <div className="flex items-center gap-1">
+                                        <Badge variant="outline" className="h-4 px-1 text-[9px] bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800">
+                                            <ArrowUp className="h-2.5 w-2.5 mr-0.5" />
+                                            5.2%
+                                        </Badge>
+                                        <span className="text-[9px] text-muted-foreground">vs last {30} days</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-muted-foreground">No-show Rate</p>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0">
+                                                        <Info className="h-3 w-3 text-muted-foreground" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="right">
+                                                    <p className="text-xs">Percentage of scheduled sessions missed without cancellation</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
+                                    <p className="text-lg font-semibold">7.3%</p>
+                                    <div className="flex items-center gap-1">
+                                        <Badge variant="outline" className="h-4 px-1 text-[9px] bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-800">
+                                            <ArrowUp className="h-2.5 w-2.5 mr-0.5" />
+                                            1.2%
+                                        </Badge>
+                                        <span className="text-[9px] text-muted-foreground">vs last {30} days</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-muted-foreground">Active Clients</p>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0">
+                                                        <Info className="h-3 w-3 text-muted-foreground" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="right">
+                                                    <p className="text-xs">Percentage of clients with at least one session in the last 30 days</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
+                                    <p className="text-lg font-semibold">
+                                        {clients.filter(c => c.status === 'ACTIVE').length > 0 ?
+                                            Math.round((clients.filter(c => c.status === 'ACTIVE').length / clients.length) * 100) : 0}%
+                                    </p>
+                                    <div className="flex items-center gap-1">
+                                        <Badge variant="outline" className="h-4 px-1 text-[9px] bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800">
+                                            <ArrowUp className="h-2.5 w-2.5 mr-0.5" />
+                                            3.8%
+                                        </Badge>
+                                        <span className="text-[9px] text-muted-foreground">vs last {30} days</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-muted-foreground">Retention Rate</p>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0">
+                                                        <Info className="h-3 w-3 text-muted-foreground" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="right">
+                                                    <p className="text-xs">Percentage of clients who remain active after their initial sessions</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
+                                    <p className="text-lg font-semibold">93.1%</p>
+                                    <div className="flex items-center gap-1">
+                                        <Badge variant="outline" className="h-4 px-1 text-[9px] bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                                            <ArrowDown className="h-2.5 w-2.5 mr-0.5" />
+                                            0.7%
+                                        </Badge>
+                                        <span className="text-[9px] text-muted-foreground">vs last {30} days</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Upcoming Client Sessions */}
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm">Upcoming Sessions</CardTitle>
+                                <div className="flex items-center">
+                                    <Badge variant="outline" className="mr-2 text-xs h-5 px-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+                                        Today: {clients.slice(0, 4).length}
+                                    </Badge>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-full">
+                                                <Calendar className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-[200px]">
+                                            <DropdownMenuLabel className="text-xs">View Schedule</DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem className="text-xs cursor-pointer">
+                                                <Calendar className="h-3.5 w-3.5 mr-2 text-blue-500" />
+                                                Today's Sessions
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-xs cursor-pointer">
+                                                <Calendar className="h-3.5 w-3.5 mr-2 text-purple-500" />
+                                                This Week
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-xs cursor-pointer">
+                                                <Calendar className="h-3.5 w-3.5 mr-2 text-green-500" />
+                                                All Upcoming
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem className="text-xs cursor-pointer">
+                                                <Plus className="h-3.5 w-3.5 mr-2 text-blue-500" />
+                                                Add New Session
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="px-2 py-1">
+                            <div className="space-y-1">
+                                {/* Generate sessions dynamically from client data */}
+                                {clients.slice(0, 4).map((client, index) => {
+                                    // Generate random session times and counselors
+                                    const times = ['09:00', '10:30', '13:15', '15:00', '16:30'];
+                                    const counselors = ['Dr. Sarah Johnson', 'Dr. Michael Chen', 'Dr. Rebecca Lee', 'Dr. James Wilson'];
+                                    const statuses = ['Confirmed', 'Pending', 'Confirmed', 'Confirmed'];
+                                    const statusColors = [
+                                        'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800',
+                                        'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+                                        'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800',
+                                        'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
+                                    ];
+
+                                    return (
+                                        <div key={client.id} className="flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-colors cursor-pointer group">
+                                            <div className="flex-shrink-0 flex flex-col items-center justify-center mr-3">
+                                                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{times[index]}</span>
+                                                <span className="text-[10px] text-muted-foreground">{index === 0 || index === 1 ? 'AM' : 'PM'}</span>
+                                            </div>
+                                            <div className="flex-grow min-w-0">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-xs font-medium truncate">{client.name}{client.clientType === 'COMPANY' ? ` - ${['HR', 'Marketing', 'Executive', 'IT'][index % 4]} Team` : ''}</p>
+                                                    <Badge variant="outline" className={`text-[9px] h-4 px-1 ${statusColors[index]} ml-1`}>
+                                                        {statuses[index]}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center mt-0.5">
+                                                    <User2 className="h-3 w-3 text-muted-foreground mr-1" />
+                                                    <p className="text-[10px] text-muted-foreground truncate">{counselors[index]}</p>
+                                                </div>
+                                            </div>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-full ml-2">
+                                                        <MoreHorizontal className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-[160px]">
+                                                    <DropdownMenuItem className="text-xs cursor-pointer">
+                                                        <Eye className="h-3.5 w-3.5 mr-2 text-blue-500" />
+                                                        View Details
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-xs cursor-pointer">
+                                                        <Edit className="h-3.5 w-3.5 mr-2 text-amber-500" />
+                                                        Reschedule
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-xs cursor-pointer">
+                                                        <MessageSquare className="h-3.5 w-3.5 mr-2 text-indigo-500" />
+                                                        Send Reminder
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem className="text-xs text-red-500 cursor-pointer">
+                                                        <XCircle className="h-3.5 w-3.5 mr-2" />
+                                                        Cancel Session
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="pt-2 mt-2 border-t flex items-center justify-between">
+                                <Button variant="link" size="sm" className="text-[10px] h-auto p-0">
+                                    View all sessions <ChevronRight className="h-3 w-3 ml-1" />
+                                </Button>
+                                <Button variant="outline" size="sm" className="h-6 px-2 rounded-full text-[10px] gap-1">
+                                    <Plus className="h-3 w-3" />
+                                    <span>New Session</span>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Client Onboarding Progress */}
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm">Onboarding Progress</CardTitle>
+                                <Button variant="outline" size="sm" className="h-7 px-2 rounded-full text-xs gap-1">
+                                    <Plus className="h-3.5 w-3.5" />
+                                    Add Client
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-3">
+                                {/* Recently added clients with onboarding status */}
+                                {clients.slice(0, 3).map((client, index) => {
+                                    // Simulate different onboarding stages
+                                    const stages = ['Profile Complete', 'Needs Setup', 'Session Scheduled'];
+                                    const progress = [100, 35, 65];
+                                    const colors = [
+                                        'bg-green-500 dark:bg-green-500',
+                                        'bg-amber-500 dark:bg-amber-500',
+                                        'bg-blue-500 dark:bg-blue-500'
+                                    ];
+
+                                    return (
+                                        <div key={client.id} className="space-y-1.5">
+                                            <div className="flex items-center justify-between text-xs">
+                                                <div className="flex items-center">
+                                                    <Avatar className="h-5 w-5 mr-2">
+                                                        <AvatarFallback className={client.clientType === 'COMPANY' ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"}>
+                                                            {client.name.charAt(0)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="font-medium truncate max-w-[120px]">{client.name}</span>
+                                                </div>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`text-[9px] px-1 h-3.5 ${index === 0
+                                                        ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
+                                                        : index === 1
+                                                            ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+                                                            : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                                                        }`}
+                                                >
+                                                    {stages[index]}
+                                                </Badge>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full ${colors[index]} transition-all duration-500`}
+                                                    style={{ width: `${progress[index]}%` }}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between text-[9px] text-muted-foreground">
+                                                <span>Added {index === 0 ? 'Today' : index === 1 ? 'Yesterday' : '3 days ago'}</span>
+                                                <span>{progress[index]}% Complete</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                <Separator className="my-1" />
+
+                                {/* Client type distribution */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="font-medium">Client Distribution</span>
+                                        <span className="text-[10px] text-muted-foreground">Last 30 days</span>
+                                    </div>
+
+                                    {/* Company clients */}
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between text-[10px]">
+                                            <div className="flex items-center">
+                                                <div className="h-2.5 w-2.5 rounded-sm bg-blue-500 mr-1.5"></div>
+                                                <span>Companies</span>
+                                            </div>
+                                            <span className="font-medium">{clients.filter(c => c.clientType === 'COMPANY').length}</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-blue-500 dark:bg-blue-500"
+                                                style={{
+                                                    width: `${Math.round((clients.filter(c => c.clientType === 'COMPANY').length / clients.length) * 100)}%`
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Individual clients */}
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between text-[10px]">
+                                            <div className="flex items-center">
+                                                <div className="h-2.5 w-2.5 rounded-sm bg-purple-500 mr-1.5"></div>
+                                                <span>Individuals</span>
+                                            </div>
+                                            <span className="font-medium">{clients.filter(c => c.clientType === 'INDIVIDUAL').length}</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-purple-500 dark:bg-purple-500"
+                                                style={{
+                                                    width: `${Math.round((clients.filter(c => c.clientType === 'INDIVIDUAL').length / clients.length) * 100)}%`
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-2 mt-1 border-t text-center">
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        className="text-[10px] h-auto p-0"
+                                        onClick={() => setIsAddClientDialogOpen(true)}
+                                    >
+                                        View onboarding pipeline <ChevronRight className="h-3 w-3 ml-1" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </div>
     );
 } 
