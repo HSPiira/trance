@@ -101,7 +101,8 @@ export default function CompanyDependantsContent({ client }: { client: Client })
                 department: beneficiary.department,
                 role: beneficiary.role,
             }));
-            return [...acc, ...dependantsWithContext];
+            dependantsWithContext.forEach(d => acc.push(d));
+            return acc;
         }
         return acc;
     }, []);
