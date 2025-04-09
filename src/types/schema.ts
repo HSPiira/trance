@@ -43,6 +43,8 @@ export interface Dependant {
     id: string;
     name: string;
     relation: string;
+    parentId: string;
+    parentType: 'CLIENT' | 'BENEFICIARY';
     status: ClientStatus;
 }
 
