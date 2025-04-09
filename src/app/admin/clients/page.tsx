@@ -378,11 +378,14 @@ export default function AdminClientsPage() {
                     break
 
                 case 'export':
-                    // Generate CSV content for selected clients
+                // Generate CSV content for selected clients
+                case 'export': {
                     const selectedClientsData = clients.filter(client =>
                         selectedClients.includes(client.id)
                     )
                     const csvContent = generateCSVContent(selectedClientsData)
+                    break;
+                }
                     downloadCSV(csvContent, 'selected-clients.csv')
                     toast({
                         title: "Export successful",
