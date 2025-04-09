@@ -106,7 +106,7 @@ export default function LandingPage() {
           <Link href="#" className="text-sm font-medium tracking-tight hover:text-black/60 dark:hover:text-white/60 transition-colors">
             Home
           </Link>
-          <Link href="#" className="text-sm font-medium tracking-tight hover:text-black/60 dark:hover:text-white/60 transition-colors">
+          <Link href="/services" className="text-sm font-medium tracking-tight hover:text-black/60 dark:hover:text-white/60 transition-colors">
             Services
           </Link>
           <Link href="#" className="text-sm font-medium tracking-tight hover:text-black/60 dark:hover:text-white/60 transition-colors">
