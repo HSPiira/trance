@@ -391,21 +391,6 @@ export default function AdminClientsPage() {
 
                 case 'assign':
                     // Open assign dialog
-// ... other imports
-import { useState } from 'react'
-
-function ClientsPage() {
-  // Define the missing dialog state
-  const [showAssignDialog, setShowAssignDialog] = useState(false)
-
-  // ... other code
-
-                    setShowAssignDialog(true)
-
-  // ... rest of the component
-}
-
-export default ClientsPage
                     break
 
                 case 'delete':
