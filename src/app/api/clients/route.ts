@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 // GET /api/clients - Get all clients
 export async function GET(request: NextRequest) {
@@ -14,16 +14,17 @@ export async function GET(request: NextRequest) {
 
         const skip = (page - 1) * limit;
 
-        const where = {
+        // Build where clause
+        const where: Prisma.ClientWhereInput = {
             AND: [
                 search ? {
                     OR: [
-                        { name: { contains: search, mode: 'insensitive' } },
-                        { email: { contains: search, mode: 'insensitive' } },
+                        { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
+                        { email: { contains: search, mode: Prisma.QueryMode.insensitive } },
                     ],
                 } : {},
-                status && status !== 'ALL' ? { status } : {},
-                clientType && clientType !== 'ALL' ? { clientType } : {},
+                status && status !== 'ALL' ? { status: status as any } : {},
+                clientType && clientType !== 'ALL' ? { clientType: clientType as any } : {},
             ],
         };
 
@@ -33,12 +34,6 @@ export async function GET(request: NextRequest) {
                 skip,
                 take: limit,
                 include: {
-                    beneficiaries: {
-                        include: {
-                            dependants: true,
-                        },
-                    },
-                    dependants: true,
                     sessions: true,
                     documents: true,
                     notes: true,
@@ -74,8 +69,11 @@ export async function POST(request: NextRequest) {
         const client = await prisma.client.create({
             data,
             include: {
-                beneficiaries: true,
-                dependants: true,
+                sessions: true,
+                documents: true,
+                notes: true,
+                messages: true,
+                company: true,
             },
         });
         return NextResponse.json(client);
@@ -95,8 +93,11 @@ export async function PUT(request: NextRequest) {
             where: { id },
             data,
             include: {
-                beneficiaries: true,
-                dependants: true,
+                sessions: true,
+                documents: true,
+                notes: true,
+                messages: true,
+                company: true,
             },
         });
         return NextResponse.json(client);
