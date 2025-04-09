@@ -26,13 +26,13 @@ interface FeatureCardProps {
 
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
-    <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
+    <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-card">
       <CardContent className="p-6">
         <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-4">
           <div className="text-primary">{icon}</div>
         </div>
-        <h3 className="text-xl font-semibold mb-2">{title}</h3>
-        <p className="text-gray-600">{description}</p>
+        <h3 className="text-xl font-semibold mb-2 text-foreground">{title}</h3>
+        <p className="text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
   );
@@ -46,12 +46,12 @@ interface StepCardProps {
 
 function StepCard({ number, title, description }: StepCardProps) {
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md text-center">
-      <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold mx-auto mb-4">
+    <div className="bg-card p-6 rounded-xl shadow-md text-center">
+      <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold mx-auto mb-4">
         {number}
       </div>
-      <h3 className="text-xl font-semibold mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+      <h3 className="text-xl font-semibold mb-2 text-foreground">{title}</h3>
+      <p className="text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -63,7 +63,7 @@ interface TestimonialCardProps {
 
 function TestimonialCard({ quote, author }: TestimonialCardProps) {
   return (
-    <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
+    <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-card">
       <CardContent className="p-6">
         <div className="mb-4">
           <svg
@@ -74,8 +74,8 @@ function TestimonialCard({ quote, author }: TestimonialCardProps) {
             <path d="M9.352 4C4.456 7.456 1 13.12 1 19.36c0 5.088 3.072 8.064 6.624 8.064 3.36 0 5.856-2.688 5.856-5.856 0-3.168-2.208-5.472-5.088-5.472-.576 0-1.344.096-1.536.192.48-3.264 3.552-7.104 6.624-9.024L9.352 4zm16.512 0c-4.8 3.456-8.256 9.12-8.256 15.36 0 5.088 3.072 8.064 6.624 8.064 3.264 0 5.856-2.688 5.856-5.856 0-3.168-2.304-5.472-5.184-5.472-.576 0-1.248.096-1.44.192.48-3.264 3.456-7.104 6.528-9.024L25.864 4z" />
           </svg>
         </div>
-        <p className="text-gray-600 mb-6">{quote}</p>
-        <p className="font-semibold">{author}</p>
+        <p className="text-muted-foreground mb-6">{quote}</p>
+        <p className="font-semibold text-foreground">{author}</p>
       </CardContent>
     </Card>
   );
@@ -85,17 +85,19 @@ export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-sky-50">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="py-4 px-6 md:px-10 lg:px-20 flex items-center justify-between">
+      <nav className="py-4 px-6 md:px-10 lg:px-20 flex items-center justify-between border-b">
         <div className="flex items-center gap-2">
           <HeartHandshake className="h-8 w-8 text-primary" />
-          <span className="text-xl font-semibold">Hope Counseling</span>
+          <span className="text-xl font-semibold text-foreground">
+            Hope Counseling
+          </span>
         </div>
 
         {/* Mobile menu button */}
         <button
-          className="md:hidden"
+          className="md:hidden text-foreground"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
           {isMenuOpen ? (
@@ -109,25 +111,25 @@ export default function LandingPage() {
         <div className="hidden md:flex items-center gap-6">
           <Link
             href="#features"
-            className="text-sm font-medium hover:text-primary"
+            className="text-sm font-medium hover:text-primary text-foreground"
           >
             Features
           </Link>
           <Link
             href="#how-it-works"
-            className="text-sm font-medium hover:text-primary"
+            className="text-sm font-medium hover:text-primary text-foreground"
           >
             How It Works
           </Link>
           <Link
             href="#testimonials"
-            className="text-sm font-medium hover:text-primary"
+            className="text-sm font-medium hover:text-primary text-foreground"
           >
             Testimonials
           </Link>
           <Link
             href="/login"
-            className="text-sm font-medium hover:text-primary"
+            className="text-sm font-medium hover:text-primary text-foreground"
           >
             Log In
           </Link>
@@ -139,29 +141,29 @@ export default function LandingPage() {
 
       {/* Mobile menu */}
       {isMenuOpen && (
-        <div className="md:hidden px-6 py-4 bg-white shadow-md">
+        <div className="md:hidden px-6 py-4 bg-card shadow-md">
           <div className="flex flex-col gap-4">
             <Link
               href="#features"
-              className="text-sm font-medium hover:text-primary"
+              className="text-sm font-medium hover:text-primary text-foreground"
             >
               Features
             </Link>
             <Link
               href="#how-it-works"
-              className="text-sm font-medium hover:text-primary"
+              className="text-sm font-medium hover:text-primary text-foreground"
             >
               How It Works
             </Link>
             <Link
               href="#testimonials"
-              className="text-sm font-medium hover:text-primary"
+              className="text-sm font-medium hover:text-primary text-foreground"
             >
               Testimonials
             </Link>
             <Link
               href="/login"
-              className="text-sm font-medium hover:text-primary"
+              className="text-sm font-medium hover:text-primary text-foreground"
             >
               Log In
             </Link>
@@ -175,10 +177,10 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="py-16 px-6 md:px-10 lg:px-20 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
         <div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
             Your journey to better mental health starts here
           </h1>
-          <p className="mt-6 text-xl text-gray-600">
+          <p className="mt-6 text-xl text-muted-foreground">
             Connect with professional counselors, track your progress, and take
             control of your mental wellbeing with our comprehensive counseling
             platform.
@@ -194,7 +196,7 @@ export default function LandingPage() {
         </div>
         <div className="relative h-[400px] md:h-[500px] w-full rounded-xl overflow-hidden shadow-xl">
           <Image
-            src="/mental-health.jpg"
+            src="/mental-health.png"
             alt="Online counseling session"
             fill
             style={{ objectFit: "cover" }}
@@ -204,12 +206,15 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-6 md:px-10 lg:px-20 bg-white">
+      <section
+        id="features"
+        className="py-20 px-6 md:px-10 lg:px-20 bg-muted/30"
+      >
         <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-foreground">
             Comprehensive Mental Health Support
           </h2>
-          <p className="mt-4 text-xl text-gray-600">
+          <p className="mt-4 text-xl text-muted-foreground">
             Our platform provides everything you need for your mental health
             journey.
           </p>
@@ -252,11 +257,11 @@ export default function LandingPage() {
       {/* How It Works Section */}
       <section
         id="how-it-works"
-        className="py-20 px-6 md:px-10 lg:px-20 bg-gradient-to-b from-sky-50 to-white"
+        className="py-20 px-6 md:px-10 lg:px-20 bg-muted/50"
       >
         <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-900">How It Works</h2>
-          <p className="mt-4 text-xl text-gray-600">
+          <h2 className="text-3xl font-bold text-foreground">How It Works</h2>
+          <p className="mt-4 text-xl text-muted-foreground">
             Start your journey to better mental health in just a few simple
             steps.
           </p>
@@ -286,13 +291,13 @@ export default function LandingPage() {
       {/* Testimonials Section */}
       <section
         id="testimonials"
-        className="py-20 px-6 md:px-10 lg:px-20 bg-white"
+        className="py-20 px-6 md:px-10 lg:px-20 bg-background"
       >
         <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-foreground">
             What Our Clients Say
           </h2>
-          <p className="mt-4 text-xl text-gray-600">
+          <p className="mt-4 text-xl text-muted-foreground">
             Real stories from people who have found support and healing through
             our platform.
           </p>
@@ -315,7 +320,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6 md:px-10 lg:px-20 bg-primary text-white">
+      <section className="py-20 px-6 md:px-10 lg:px-20 bg-primary text-primary-foreground">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-3xl font-bold">Ready to Start Your Journey?</h2>
           <p className="mt-6 text-xl">
@@ -330,7 +335,7 @@ export default function LandingPage() {
               asChild
               size="lg"
               variant="outline"
-              className="border-white text-white hover:bg-white hover:text-primary"
+              className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
             >
               <Link href="/login">Sign In</Link>
             </Button>
@@ -339,36 +344,42 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-10 px-6 md:px-10 lg:px-20 bg-gray-900 text-gray-300">
+      <footer className="py-10 px-6 md:px-10 lg:px-20 bg-muted text-muted-foreground">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <HeartHandshake className="h-8 w-8 text-white" />
-              <span className="text-xl font-semibold text-white">
+              <HeartHandshake className="h-8 w-8 text-primary" />
+              <span className="text-xl font-semibold text-foreground">
                 Hope Counseling
               </span>
             </div>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               Providing accessible mental health support for everyone,
               everywhere.
             </p>
           </div>
 
           <div>
-            <h3 className="text-white font-semibold mb-4">Platform</h3>
+            <h3 className="text-foreground font-semibold mb-4">Platform</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="#features" className="text-sm hover:text-white">
+                <Link href="#features" className="text-sm hover:text-primary">
                   Features
                 </Link>
               </li>
               <li>
-                <Link href="#how-it-works" className="text-sm hover:text-white">
+                <Link
+                  href="#how-it-works"
+                  className="text-sm hover:text-primary"
+                >
                   How It Works
                 </Link>
               </li>
               <li>
-                <Link href="#testimonials" className="text-sm hover:text-white">
+                <Link
+                  href="#testimonials"
+                  className="text-sm hover:text-primary"
+                >
                   Testimonials
                 </Link>
               </li>
@@ -376,20 +387,20 @@ export default function LandingPage() {
           </div>
 
           <div>
-            <h3 className="text-white font-semibold mb-4">Resources</h3>
+            <h3 className="text-foreground font-semibold mb-4">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="#" className="text-sm hover:text-white">
+                <Link href="#" className="text-sm hover:text-primary">
                   Blog
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm hover:text-white">
+                <Link href="#" className="text-sm hover:text-primary">
                   FAQs
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm hover:text-white">
+                <Link href="#" className="text-sm hover:text-primary">
                   Support
                 </Link>
               </li>
@@ -397,20 +408,20 @@ export default function LandingPage() {
           </div>
 
           <div>
-            <h3 className="text-white font-semibold mb-4">Legal</h3>
+            <h3 className="text-foreground font-semibold mb-4">Legal</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="#" className="text-sm hover:text-white">
+                <Link href="#" className="text-sm hover:text-primary">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm hover:text-white">
+                <Link href="#" className="text-sm hover:text-primary">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm hover:text-white">
+                <Link href="#" className="text-sm hover:text-primary">
                   Cookie Policy
                 </Link>
               </li>
@@ -418,8 +429,8 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto border-t border-gray-800 mt-10 pt-8 text-center">
-          <p className="text-sm text-gray-500">
+        <div className="max-w-7xl mx-auto border-t border-border mt-10 pt-8 text-center">
+          <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Hope Counseling. All rights reserved.
           </p>
         </div>
