@@ -10,121 +10,312 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model - core user information
+// Base model with common fields
+model BaseModel {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("_base_model")
+}
+
+// Client model - Base model for both Individual and Company clients
+model Client {
+  name          String
+  email         String
+  phone         String
+  status        ClientStatus
+  joinDate      DateTime
+  lastActive    DateTime
+  clientType    ClientType
+  counsellor    String?
+  avatar        String?
+  appointments  Int           @default(0)
+  resources     Int           @default(0)
+  
+  // Relations
+  company       Company?      // For company clients
+  sessions      Session[]
+  documents     Document[]
+  notes         Note[]
+  messages      Message[]
+
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Person model - Base model for both employees and dependants
+model Person {
+  fullName      String
+  dateOfBirth   DateTime
+  gender        String
+  nationalId    String?       @unique // NIN or similar unique ID
+  email         String?
+  phone         String?
+  address       String?
+  
+  // Relations
+  employee      Employee?     // If this person is an employee
+  dependant     Dependant?    // If this person is a dependant
+  services      PersonService[] // Services received by this person
+
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Company model - Extends Client for company-specific information
+model Company {
+  registrationNumber  String    @unique
+  industry            String?
+  size                Int?      // Number of employees
+  website             String?
+  
+  // Relations
+  client              Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId            String    @unique
+  employees           Employee[]
+
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Employee model - Represents an employee of a company
+model Employee {
+  employeeNumber  String    @unique
+  jobTitle        String?
+  department      String?
+  hireDate        DateTime
+  status          EmployeeStatus @default(ACTIVE)
+  
+  // Relations
+  person          Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId        String    @unique
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId       String
+  dependants      Dependant[] // Dependants of this employee
+
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Dependant model - Represents a dependant of an employee
+model Dependant {
+  relationship        String    // e.g., Child, Spouse, etc.
+  
+  // Relations
+  person              Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId            String    @unique
+  dependentOfEmployee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId          String
+
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Service model - Represents a service offered
+model Service {
+  serviceName     String
+  description     String?
+  category        String?
+  isActive        Boolean   @default(true)
+  
+  // Relations
+  personServices  PersonService[]
+
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// PersonService model - Connects a person to services they receive
+model PersonService {
+  dateReceived    DateTime
+  notes           String?
+  
+  // Relations
+  person          Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId        String
+  service         Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId       String
+
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// User model - For system users (admin, counselors, etc.)
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  firstName     String
-  lastName      String
-  phoneNumber   String?
-  role          UserRole
-  status        UserStatus @default(PENDING)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  name      String
+  email     String    @unique
+  role      UserRole
+  avatar    String?
+  
+  // Relations
+  sessions  Session[]
+  documents Document[]
+  notes     Note[]
+  messages  Message[]
+  resources Resource[]
 
-  // Profile relations
-  clientProfile       ClientProfile?
-  counsellorProfile   CounsellorProfile?
-  adminProfile        AdminProfile?
-  orgContactProfile   OrgContactProfile?
-
-  // Audit logs
-  createdAuditLogs    AuditLog[] @relation("CreatedBy")
-  updatedAuditLogs    AuditLog[] @relation("UpdatedBy")
-
-  @@map("users")
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// Client profile - specific to client users
-model ClientProfile {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientType      ClientType
-  dateOfBirth     DateTime?
-  address         String?
-  emergencyContact String?
-  emergencyPhone  String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+// Session model
+model Session {
+  date        DateTime
+  duration    Int
+  status      SessionStatus
+  notes       String?
+  type        SessionType
+  
+  // Relations
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId    String
+  counselor   User          @relation(fields: [counselorId], references: [id])
+  counselorId String
 
-  @@map("client_profiles")
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// Counsellor profile - specific to counsellor users
-model CounsellorProfile {
-  id                String    @id @default(cuid())
-  userId            String    @unique
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialization    String?
-  yearsOfExperience Int?
-  certificationNumber String?
-  certificationExpiry DateTime?
-  bankDetails       String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+// Document model
+model Document {
+  title       String
+  type        DocumentType
+  url         String
+  size        Int
+  uploadedAt  DateTime      @default(now())
+  
+  // Relations
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId    String
+  uploadedBy  User          @relation(fields: [uploadedById], references: [id])
+  uploadedById String
 
-  @@map("counsellor_profiles")
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// Admin profile - specific to admin users
-model AdminProfile {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  department  String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+// Note model
+model Note {
+  content     String
+  isPrivate   Boolean   @default(false)
+  
+  // Relations
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    String
 
-  @@map("admin_profiles")
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// Organization contact profile - specific to org contact users
-model OrgContactProfile {
-  id            String    @id @default(cuid())
-  userId        String    @unique
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organizationId String
-  position      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+// Message model
+model Message {
+  content     String
+  sentAt      DateTime  @default(now())
+  readAt      DateTime?
+  attachments String[]
+  
+  // Relations
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId    String
+  sender      User      @relation(fields: [senderId], references: [id])
+  senderId    String
 
-  @@map("org_contact_profiles")
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// Audit log - tracks user actions
-model AuditLog {
-  id          String    @id @default(cuid())
-  action      String
-  entityType  String
-  entityId    String
-  details     String?
+// Resource model
+model Resource {
+  title       String
+  description String
+  type        ResourceType
+  url         String
+  
+  // Relations
+  createdBy   User          @relation(fields: [createdById], references: [id])
   createdById String
-  createdBy   User      @relation("CreatedBy", fields: [createdById], references: [id])
-  updatedById String?
-  updatedBy   User?     @relation("UpdatedBy", fields: [updatedById], references: [id])
-  createdAt   DateTime  @default(now())
 
-  @@map("audit_logs")
+  // Inherit from BaseModel
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Enums
-enum UserRole {
-  CLIENT
-  COUNSELLOR
-  ADMIN
-  ORG_CONTACT
-}
-
 enum ClientType {
-  PRIMARY
-  SECONDARY
+  COMPANY
+  INDIVIDUAL
 }
 
-enum UserStatus {
-  PENDING
+enum ClientStatus {
   ACTIVE
   INACTIVE
-  SUSPENDED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum UserRole {
+  ADMIN
+  COUNSELOR
+  STAFF
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum SessionType {
+  INITIAL
+  FOLLOW_UP
+  EMERGENCY
+  GROUP
+}
+
+enum DocumentType {
+  CONSENT
+  ASSESSMENT
+  REPORT
+  OTHER
+}
+
+enum ResourceType {
+  ARTICLE
+  VIDEO
+  WORKSHOP
+  TOOL
 } 

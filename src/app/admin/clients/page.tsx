@@ -221,9 +221,16 @@ export default function AdminClientsPage() {
     // Bulk actions state
     const [selectedClients, setSelectedClients] = useState<string[]>([])
     const [selectAll, setSelectAll] = useState(false)
-    const [showCounselorDialog, setShowCounselorDialog] = useState(false)
 
-    const [clients, setClients] = useState<Client[]>([])
+    // Advanced filters state
+    const [advancedFilters, setAdvancedFilters] = useState({
+        status: '',
+        clientType: '',
+        dateRange: {
+            from: '',
+            to: ''
+        }
+    })
 
     useEffect(() => {
         if (!user || user.role !== 'ADMIN') {
@@ -231,71 +238,74 @@ export default function AdminClientsPage() {
         }
     }, [router, user])
 
-    // Filter clients based on search and filters
+    // Filter and search functionality
     const filteredClients = useMemo(() => {
-        let result = [...clients];
+        return clients.filter(client => {
+            // Quick filter
+            if (filter !== 'ALL') {
+                switch (filter) {
+                    case 'COMPANY':
+                        if (client.clientType !== 'COMPANY') return false
+                        break
+                    case 'INDIVIDUAL':
+                        if (client.clientType !== 'INDIVIDUAL') return false
+                        break
+                    case 'ACTIVE':
+                        if (client.status !== 'ACTIVE') return false
+                        break
+                    case 'INACTIVE':
+                        if (client.status !== 'INACTIVE') return false
+                        break
+                    case 'RECENT':
+                        const lastActive = new Date(client.lastActive)
+                        const thirtyDaysAgo = new Date()
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+                        if (lastActive < thirtyDaysAgo) return false
+                        break
+                }
+            }
 
-        // Combine all filters into a single pass
-        result = result.filter(client => {
-            // Search filter - check multiple fields
+            // Advanced filters
+            if (advancedFilters.status && client.status !== advancedFilters.status) {
+                return false
+            }
+            if (advancedFilters.clientType && client.clientType !== advancedFilters.clientType) {
+                return false
+            }
+            if (advancedFilters.dateRange.from || advancedFilters.dateRange.to) {
+                const joinDate = new Date(client.joinDate)
+                const fromDate = advancedFilters.dateRange.from ? new Date(advancedFilters.dateRange.from) : null
+                const toDate = advancedFilters.dateRange.to ? new Date(advancedFilters.dateRange.to) : null
+
+                if (fromDate && joinDate < fromDate) return false
+                if (toDate && joinDate > toDate) return false
+            }
+
+            // Search query
             if (searchQuery) {
-                const searchLower = searchQuery.toLowerCase();
+                const query = searchQuery.toLowerCase()
                 const searchableFields = [
                     client.name,
                     client.email,
                     client.phone,
                     client.status,
                     client.clientType
-                ].map(field => (field || '').toLowerCase());
+                ].map(field => (field || '').toLowerCase())
 
-                if (!searchableFields.some(field => field.includes(searchLower))) {
-                    return false;
-                }
+                return searchableFields.some(field => field.includes(query))
             }
 
-            // Status filter
-            if (statusFilter !== "ALL" && client.status !== statusFilter) {
-                return false;
-            }
+            return true
+        })
+    }, [clients, filter, searchQuery, advancedFilters])
 
-            // Client type filter
-            if (clientTypeFilter !== "ALL" && client.clientType !== clientTypeFilter) {
-                return false;
-            }
+    // Pagination
+    const paginatedClients = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage
+        return filteredClients.slice(startIndex, startIndex + itemsPerPage)
+    }, [filteredClients, currentPage, itemsPerPage])
 
-            // Quick filter
-            switch (filter) {
-                case 'COMPANIES':
-                    if (client.clientType !== 'COMPANY') return false;
-                    break;
-                case 'INDIVIDUALS':
-                    if (client.clientType !== 'INDIVIDUAL') return false;
-                    break;
-                case 'ACTIVE':
-                    if (client.status !== 'ACTIVE') return false;
-                    break;
-                case 'INACTIVE':
-                    if (client.status !== 'INACTIVE') return false;
-                    break;
-                case 'RECENT':
-                    try {
-                        const lastActive = new Date(client.lastActive);
-                        if (isNaN(lastActive.getTime())) return false;
-
-                        const now = new Date();
-                        const diffDays = Math.ceil((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
-                        if (diffDays > 30) return false;
-                    } catch (error) {
-                        return false;
-                    }
-                    break;
-            }
-
-            return true;
-        });
-
-        return result;
-    }, [clients, searchQuery, statusFilter, clientTypeFilter, filter]);
+    const totalPages = Math.ceil(filteredClients.length / itemsPerPage)
 
     // Handle bulk selection
     const toggleSelectAll = () => {
@@ -363,69 +373,28 @@ export default function AdminClientsPage() {
                     break
 
                 case 'export':
-                    // Prepare CSV data for export
-                    const exportData = clients
-                        .filter(client => selectedClients.includes(client.id))
-                        .map(client => ({
-                            name: client.name || '',
-                            email: client.email || '',
-                            phone: client.phone || '',
-                            status: client.status || '',
-                            clientType: client.clientType || '',
-                            joinDate: client.joinDate || '',
-                            lastActive: client.lastActive || '',
-                            notes: client.notes || ''
-                        }))
-
-                    if (exportData.length === 0) {
-                        toast({
-                            title: "Export failed",
-                            description: "No data available to export",
-                            variant: "destructive"
-                        })
-                        return
-                    }
-
-                    // Convert to CSV
-                    const headers = Object.keys(exportData[0] as Record<string, string>)
-                    const csvContent = [
-                        headers.join(','),
-                        ...exportData.map(row =>
-                            headers.map(header =>
-                                JSON.stringify(row[header as keyof typeof row])
-                            ).join(',')
-                        )
-                    ].join('\n')
-
-                    // Create and trigger download
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-                    const link = document.createElement('a')
-                    link.href = URL.createObjectURL(blob)
-                    link.download = `clients_export_${new Date().toISOString().split('T')[0]}.csv`
-                    link.click()
-                    URL.revokeObjectURL(link.href)
-
+                    // Generate CSV content for selected clients
+                    const selectedClientsData = clients.filter(client =>
+                        selectedClients.includes(client.id)
+                    )
+                    const csvContent = generateCSVContent(selectedClientsData)
+                    downloadCSV(csvContent, 'selected-clients.csv')
                     toast({
                         title: "Export successful",
-                        description: `${selectedClients.length} clients exported to CSV`,
+                        description: `Exported ${selectedClients.length} clients to CSV`,
                         variant: "default"
                     })
                     break
 
                 case 'assign':
-                    // Open counselor selection dialog
-                    setShowCounselorDialog(true)
-                    toast({
-                        title: "Assign clients",
-                        description: `Please select a counselor to assign ${selectedClients.length} clients`,
-                        variant: "default"
-                    })
+                    // Open assign dialog
+                    setShowAssignDialog(true)
                     break
 
                 case 'delete':
                     // Remove selected clients
-                    const remainingClients = clients.filter(
-                        client => !selectedClients.includes(client.id)
+                    const remainingClients = clients.filter(client =>
+                        !selectedClients.includes(client.id)
                     )
                     setClients(remainingClients)
                     toast({
@@ -444,7 +413,6 @@ export default function AdminClientsPage() {
                     break
             }
         } catch (error) {
-            console.error('Error performing bulk action:', error)
             toast({
                 title: "Error",
                 description: "An error occurred while performing the action",
@@ -457,12 +425,30 @@ export default function AdminClientsPage() {
         setSelectAll(false)
     }
 
-    // Pagination
-    const totalPages = Math.ceil(filteredClients.length / itemsPerPage)
-    const paginatedClients = filteredClients.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    )
+    // Helper function to generate CSV content
+    const generateCSVContent = (clients: Client[]) => {
+        const headers = ['ID', 'Name', 'Email', 'Phone', 'Status', 'Type', 'Join Date', 'Last Active']
+        const rows = clients.map(client => [
+            client.id,
+            client.name,
+            client.email,
+            client.phone,
+            client.status,
+            client.clientType,
+            client.joinDate,
+            client.lastActive
+        ])
+        return [headers, ...rows].map(row => row.join(',')).join('\n')
+    }
+
+    // Helper function to download CSV
+    const downloadCSV = (content: string, filename: string) => {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = filename
+        link.click()
+    }
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page)
@@ -698,263 +684,146 @@ export default function AdminClientsPage() {
     }
 
     const handleImport = async () => {
-        if (!csvFile && !csvRecords.length) {
+        if (!csvFile) {
             toast({
-                title: "No data to import",
-                description: "Please upload or paste client data",
+                title: "No file selected",
+                description: "Please select a CSV file to import",
                 variant: "destructive"
-            });
-            return;
+            })
+            return
         }
-
-        // Check all records for missing required fields
-        let requiredFieldsErrors = 0;
-        let dataTypeErrors = 0;
-        let otherErrors = 0;
-
-        // Collect detailed errors
-        const recordErrors: { row: number, errors: string[] }[] = [];
-
-        csvRecords.forEach((record, index) => {
-            const errors: string[] = [];
-
-            // Check record type
-            if (!record.recordType) {
-                errors.push('Missing recordType');
-                requiredFieldsErrors++;
-            } else if (!['CLIENT', 'BENEFICIARY', 'DEPENDANT'].includes(record.recordType)) {
-                errors.push(`Invalid recordType "${record.recordType}"`);
-                requiredFieldsErrors++;
-            } else {
-                // Check required fields based on record type
-                const requiredForType = requiredFields[record.recordType] || [];
-                requiredForType.forEach(field => {
-                    if (!record[field as keyof ImportRecord]) {
-                        errors.push(`Missing required field "${field}" for ${record.recordType}`);
-                        requiredFieldsErrors++;
-                    }
-                });
-            }
-
-            // Validate data types
-            Object.entries(record).forEach(([key, value]) => {
-                if (value && columnDataTypes[key]) {
-                    const type = columnDataTypes[key];
-                    const isValid = validateDataType(value, type);
-                    if (!isValid) {
-                        errors.push(`Invalid data type for "${key}": expected ${type}, got "${value}"`);
-                        dataTypeErrors++;
-                    }
-                }
-            });
-
-            if (errors.length > 0) {
-                recordErrors.push({ row: index + 2, errors });
-            }
-        });
-
-        const totalErrors = requiredFieldsErrors + dataTypeErrors + otherErrors;
-
-        // Prevent import if any required fields are missing
-        if (requiredFieldsErrors > 0) {
-            toast({
-                title: "Cannot import with missing required fields",
-                description: `${requiredFieldsErrors} required field errors found. Please fix them before importing.`,
-                variant: "destructive"
-            });
-
-            // Log detailed errors for debugging
-            console.error('Import validation errors:', recordErrors);
-            return;
-        }
-
-        // Warn about data type errors but allow import to proceed
-        if (dataTypeErrors > 0) {
-            const shouldProceed = window.confirm(
-                `${dataTypeErrors} data type errors found. These may cause issues with the imported data. Do you want to proceed anyway?`
-            );
-
-            if (!shouldProceed) {
-                return;
-            }
-        }
-
-        setIsImporting(true);
-        setImportProgress(0);
 
         try {
-            // First pass: Validate the data and collect all reference IDs
-            const referenceIds = new Set<string>();
-            const validationErrors: string[] = [];
+            setIsProcessingFile(true)
+            const reader = new FileReader()
 
-            csvRecords.forEach((record, index) => {
-                // Store reference IDs
-                if (record.referenceId) {
-                    if (referenceIds.has(record.referenceId)) {
-                        validationErrors.push(`Duplicate referenceId '${record.referenceId}' at row ${index + 2}`);
-                        otherErrors++;
-                    } else {
-                        referenceIds.add(record.referenceId);
-                    }
-                } else {
-                    validationErrors.push(`Missing referenceId at row ${index + 2}`);
-                    requiredFieldsErrors++;
+            reader.onload = (e) => {
+                const content = e.target?.result as string
+                const records = parseCSVData(content)
+
+                if (records.length === 0) {
+                    toast({
+                        title: "No valid records found",
+                        description: "The CSV file does not contain any valid records",
+                        variant: "destructive"
+                    })
+                    return
                 }
-            });
 
-            // Second pass: Validate relationToIds exist
-            csvRecords.forEach((record, index) => {
-                if (record.relationToId && !referenceIds.has(record.relationToId)) {
-                    validationErrors.push(`Invalid relationToId '${record.relationToId}' at row ${index + 2} - referenced ID not found`);
-                    otherErrors++;
+                // Validate records
+                const validRecords = records.filter(record => {
+                    return validateCsvData(record)
+                })
+
+                if (validRecords.length === 0) {
+                    toast({
+                        title: "Validation failed",
+                        description: "No valid records found after validation",
+                        variant: "destructive"
+                    })
+                    return
                 }
-            });
 
-            // If validation errors exist, show them and abort
-            if (validationErrors.length > 0) {
-                const errorMsg = validationErrors.length > 3
-                    ? `${validationErrors.slice(0, 3).join('\n')}\n... and ${validationErrors.length - 3} more errors`
-                    : validationErrors.join('\n');
-
-                toast({
-                    title: `${validationErrors.length} validation errors`,
-                    description: errorMsg,
-                    variant: "destructive"
-                });
-
-                setIsImporting(false);
-                return;
+                setImportData(validRecords)
+                setImportStep(2)
             }
 
-            // Third pass: Build hierarchical data structure
-            const clientsMap = new Map();
-            const beneficiariesMap = new Map();
+            reader.onerror = () => {
+                toast({
+                    title: "Error reading file",
+                    description: "There was an error reading the CSV file",
+                    variant: "destructive"
+                })
+            }
 
-            // Process in order: clients, beneficiaries, dependants
-            // First, create all clients
-            csvRecords.filter(r => r.recordType === 'CLIENT').forEach(record => {
-                clientsMap.set(record.referenceId, {
-                    id: record.clientId || generateId(),
-                    name: record.name,
-                    email: record.email || '',
-                    phone: record.phone || '',
-                    status: record.status || 'ACTIVE',
-                    joinDate: record.joinDate || new Date().toISOString().split('T')[0],
-                    lastActive: record.lastActive || new Date().toISOString().split('T')[0],
-                    clientType: record.clientType || 'INDIVIDUAL',
-                    counsellor: record.counsellor || '',
-                    notes: record.notes || '',
-                    beneficiaries: [],
-                    dependants: [],
-                    avatar: '',
-                    appointments: 0,
-                    messages: 0,
-                    resources: 0
-                });
-            });
-
-            // Next, create and link beneficiaries
-            csvRecords.filter(r => r.recordType === 'BENEFICIARY').forEach(record => {
-                const clientRef = record.clientId;
-                const client = clientsMap.get(clientRef);
-
-                if (client && client.clientType === 'COMPANY') {
-                    const beneficiary = {
-                        id: generateId(),
-                        name: record.name,
-                        email: record.email || '',
-                        department: record.department || '',
-                        role: record.role || '',
-                        status: record.status || 'ACTIVE',
-                        dependants: []
-                    };
-
-                    beneficiariesMap.set(record.referenceId, beneficiary);
-                    client.beneficiaries.push(beneficiary);
-                }
-            });
-
-            // Finally, process dependants
-            csvRecords.filter(r => r.recordType === 'DEPENDANT').forEach(record => {
-                const dependant = {
-                    id: generateId(),
-                    name: record.name,
-                    relation: record.relation || '',
-                    status: record.status || 'ACTIVE'
-                };
-
-                // Find where this dependant belongs - to a client or beneficiary
-                const client = clientsMap.get(record.clientId);
-
-                if (!client) return;
-
-                if (client.clientType === 'INDIVIDUAL' && record.relationToId === record.clientId) {
-                    // This is a dependant of an individual client
-                    client.dependants.push(dependant);
-                } else {
-                    // This might be a dependant of a beneficiary
-                    const beneficiary = beneficiariesMap.get(record.relationToId);
-                    if (beneficiary) {
-                        beneficiary.dependants.push(dependant);
-                    }
-                }
-            });
-
-            // Convert to array of clients to import
-            const clientsToImport = Array.from(clientsMap.values());
-
-            // Simulate API call with progress
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += 5;
-                setImportProgress(Math.min(progress, 95)); // Cap at 95% until completion
-
-                if (progress >= 95) {
-                    clearInterval(progressInterval);
-                }
-            }, 200);
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            console.log('Clients to import:', clientsToImport);
-
-            // In a real app, you would send clientsToImport to your API
-            // For now, we'll just simulate success
-
-            setImportProgress(100);
-            clearInterval(progressInterval);
-
-            setImportComplete(true);
-            setImportResults({
-                total: clientsToImport.length +
-                    clientsToImport.reduce((sum, c) => sum + c.beneficiaries.length, 0) +
-                    clientsToImport.reduce((sum, c) => {
-                        const individualDeps = c.dependants.length;
-                        const beneficiaryDeps = c.beneficiaries.reduce((s: number, b: any) => s + b.dependants.length, 0);
-                        return sum + individualDeps + beneficiaryDeps;
-                    }, 0),
-                success: clientsToImport.length +
-                    clientsToImport.reduce((sum, c) => sum + c.beneficiaries.length, 0) +
-                    clientsToImport.reduce((sum, c) => {
-                        const individualDeps = c.dependants.length;
-                        const beneficiaryDeps = c.beneficiaries.reduce((s: number, b: any) => s + b.dependants.length, 0);
-                        return sum + individualDeps + beneficiaryDeps;
-                    }, 0),
-                errors: 0
-            });
-
+            reader.readAsText(csvFile)
         } catch (error) {
-            console.error('Error importing clients:', error);
             toast({
                 title: "Import failed",
-                description: "An unexpected error occurred during import",
+                description: "There was an error processing the file",
                 variant: "destructive"
-            });
-            setImportProgress(0);
+            })
+        } finally {
+            setIsProcessingFile(false)
+        }
+    }
+
+    const validateCsvData = (record: ImportRecord): boolean => {
+        // Required fields
+        if (!record.name || !record.clientType) {
+            return false
         }
 
-        setIsImporting(false);
+        // Email format
+        if (record.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
+            return false
+        }
+
+        // Phone format
+        if (record.phone && !/^\+?[\d\s-]{10,}$/.test(record.phone)) {
+            return false
+        }
+
+        // Date formats
+        if (record.joinDate && !isValidDate(record.joinDate)) {
+            return false
+        }
+        if (record.lastActive && !isValidDate(record.lastActive)) {
+            return false
+        }
+
+        // Client type validation
+        if (!['COMPANY', 'INDIVIDUAL'].includes(record.clientType)) {
+            return false
+        }
+
+        // Status validation
+        if (record.status && !['ACTIVE', 'INACTIVE'].includes(record.status)) {
+            return false
+        }
+
+        return true
+    }
+
+    const isValidDate = (dateString: string): boolean => {
+        const date = new Date(dateString)
+        return date instanceof Date && !isNaN(date.getTime())
+    }
+
+    const handleConfirmImport = async () => {
+        try {
+            // Process import data and create new clients
+            const newClients = importData.map(record => ({
+                id: generateId(),
+                name: record.name,
+                email: record.email || '',
+                phone: record.phone || '',
+                status: record.status || 'ACTIVE',
+                joinDate: record.joinDate || new Date().toISOString(),
+                lastActive: record.lastActive || new Date().toISOString(),
+                clientType: record.clientType,
+                counsellor: record.counsellor || '',
+                notes: record.notes || ''
+            }))
+
+            // Update clients state
+            setClients(prevClients => [...prevClients, ...newClients])
+
+            // Reset import state
+            resetImport()
+
+            toast({
+                title: "Import successful",
+                description: `Successfully imported ${newClients.length} clients`,
+                variant: "default"
+            })
+        } catch (error) {
+            toast({
+                title: "Import failed",
+                description: "There was an error importing the clients",
+                variant: "destructive"
+            })
+        }
     }
 
     // Helper to generate IDs
