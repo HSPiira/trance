@@ -17,6 +17,14 @@ import {
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Inter } from 'next/font/google';
+import { useTheme } from "next-themes";
+
+// Load Inter font
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
 
 interface FeatureCardProps {
   icon: React.ReactNode;
@@ -26,10 +34,10 @@ interface FeatureCardProps {
 
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
-    <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-card">
+    <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 backdrop-blur-sm hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/40 dark:hover:to-indigo-900/40">
       <CardContent className="p-6">
-        <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-          <div className="text-primary">{icon}</div>
+        <div className="bg-gradient-to-br from-blue-500 to-indigo-500 w-12 h-12 rounded-full flex items-center justify-center mb-4 text-white">
+          {icon}
         </div>
         <h3 className="text-xl font-semibold mb-2 text-foreground">{title}</h3>
         <p className="text-muted-foreground">{description}</p>
@@ -46,8 +54,8 @@ interface StepCardProps {
 
 function StepCard({ number, title, description }: StepCardProps) {
   return (
-    <div className="bg-card p-6 rounded-xl shadow-md text-center">
-      <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold mx-auto mb-4">
+    <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 p-6 rounded-xl shadow-md text-center hover:from-purple-100 hover:to-pink-100 dark:hover:from-purple-900/40 dark:hover:to-pink-900/40 transition-colors">
+      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center text-xl font-bold mx-auto mb-4">
         {number}
       </div>
       <h3 className="text-xl font-semibold mb-2 text-foreground">{title}</h3>
@@ -63,11 +71,11 @@ interface TestimonialCardProps {
 
 function TestimonialCard({ quote, author }: TestimonialCardProps) {
   return (
-    <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-card">
+    <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/30 dark:to-emerald-950/30 backdrop-blur-sm hover:from-teal-100 hover:to-emerald-100 dark:hover:from-teal-900/40 dark:hover:to-emerald-900/40">
       <CardContent className="p-6">
         <div className="mb-4">
           <svg
-            className="h-8 w-8 text-primary/60"
+            className="h-8 w-8 text-teal-500 dark:text-teal-400"
             fill="currentColor"
             viewBox="0 0 32 32"
           >
@@ -83,21 +91,62 @@ function TestimonialCard({ quote, author }: TestimonialCardProps) {
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`${inter.variable} font-sans min-h-screen bg-[#F5EDE3] dark:bg-[#1F1F1F] text-[#1F1F1F] dark:text-[#F5EDE3]`}>
       {/* Navigation */}
-      <nav className="py-4 px-6 md:px-10 lg:px-20 flex items-center justify-between border-b">
-        <div className="flex items-center gap-2">
-          <HeartHandshake className="h-8 w-8 text-primary" />
-          <span className="text-xl font-semibold text-foreground">
-            Hope Counseling
-          </span>
+      <nav className="py-6 px-6 md:px-10 lg:px-20 flex items-center justify-between sticky top-0 z-50 bg-[#F5EDE3]/80 dark:bg-[#1F1F1F]/80 backdrop-blur-sm border-b border-black/5 dark:border-white/5">
+        <Link href="/" className="text-xl font-medium tracking-tight">
+          mental.me
+        </Link>
+
+        {/* Desktop navigation */}
+        <div className="hidden md:flex items-center gap-8">
+          <Link href="#" className="text-sm font-medium tracking-tight hover:text-black/60 dark:hover:text-white/60 transition-colors">
+            Home
+          </Link>
+          <Link href="/services" className="text-sm font-medium tracking-tight hover:text-black/60 dark:hover:text-white/60 transition-colors">
+            Services
+          </Link>
+          <Link href="#" className="text-sm font-medium tracking-tight hover:text-black/60 dark:hover:text-white/60 transition-colors">
+            Products
+          </Link>
+          <Link href="#" className="text-sm font-medium tracking-tight hover:text-black/60 dark:hover:text-white/60 transition-colors">
+            About Us
+          </Link>
+          <Link href="#" className="text-sm font-medium tracking-tight hover:text-black/60 dark:hover:text-white/60 transition-colors">
+            Contact
+          </Link>
+        </div>
+
+        <div className="hidden md:flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Let's connect</span>
+            <div className="flex gap-2">
+              <Link href="#" aria-label="Twitter/X" className="w-6 h-6 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs">X</Link>
+              <Link href="#" aria-label="LinkedIn" className="w-6 h-6 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs">In</Link>
+              <Link href="#" aria-label="Telegram" className="w-6 h-6 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs">Tg</Link>
+            </div>
+          </div>
+          <Link href="/login">
+            <Button variant="outline" className="border-black dark:border-white hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-colors">
+              Login
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-2"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? "🌞" : "🌙"}
+          </Button>
         </div>
 
         {/* Mobile menu button */}
         <button
-          className="md:hidden text-foreground"
+          className="md:hidden"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
           {isMenuOpen ? (
@@ -106,333 +155,180 @@ export default function LandingPage() {
             <Menu className="h-6 w-6" />
           )}
         </button>
-
-        {/* Desktop navigation */}
-        <div className="hidden md:flex items-center gap-6">
-          <Link
-            href="#features"
-            className="text-sm font-medium hover:text-primary text-foreground"
-          >
-            Features
-          </Link>
-          <Link
-            href="#how-it-works"
-            className="text-sm font-medium hover:text-primary text-foreground"
-          >
-            How It Works
-          </Link>
-          <Link
-            href="#testimonials"
-            className="text-sm font-medium hover:text-primary text-foreground"
-          >
-            Testimonials
-          </Link>
-          <Link
-            href="/login"
-            className="text-sm font-medium hover:text-primary text-foreground"
-          >
-            Log In
-          </Link>
-          <Button asChild>
-            <Link href="/register">Get Started</Link>
-          </Button>
-        </div>
       </nav>
 
       {/* Mobile menu */}
       {isMenuOpen && (
-        <div className="md:hidden px-6 py-4 bg-card shadow-md">
+        <div className="md:hidden px-6 py-4 bg-[#F5EDE3] dark:bg-[#1F1F1F] border-t border-black/5 dark:border-white/5">
           <div className="flex flex-col gap-4">
-            <Link
-              href="#features"
-              className="text-sm font-medium hover:text-primary text-foreground"
-            >
-              Features
+            <Link href="#" className="text-sm hover:text-black/60 dark:hover:text-white/60 transition-colors">
+              Home
             </Link>
-            <Link
-              href="#how-it-works"
-              className="text-sm font-medium hover:text-primary text-foreground"
-            >
-              How It Works
+            <Link href="#" className="text-sm hover:text-black/60 dark:hover:text-white/60 transition-colors">
+              Services
             </Link>
-            <Link
-              href="#testimonials"
-              className="text-sm font-medium hover:text-primary text-foreground"
-            >
-              Testimonials
+            <Link href="#" className="text-sm hover:text-black/60 dark:hover:text-white/60 transition-colors">
+              Products
             </Link>
-            <Link
-              href="/login"
-              className="text-sm font-medium hover:text-primary text-foreground"
-            >
-              Log In
+            <Link href="#" className="text-sm hover:text-black/60 dark:hover:text-white/60 transition-colors">
+              About Us
             </Link>
-            <Button asChild className="w-full">
-              <Link href="/register">Get Started</Link>
-            </Button>
+            <Link href="#" className="text-sm hover:text-black/60 dark:hover:text-white/60 transition-colors">
+              Contact
+            </Link>
+            <Link href="/login">
+              <Button variant="outline" className="border-black dark:border-white hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-colors w-full">
+                Login
+              </Button>
+            </Link>
           </div>
         </div>
       )}
 
       {/* Hero Section */}
-      <section className="py-16 px-6 md:px-10 lg:px-20 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-        <div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
-            Your journey to better mental health starts here
-          </h1>
-          <p className="mt-6 text-xl text-muted-foreground">
-            Connect with professional counselors, track your progress, and take
-            control of your mental wellbeing with our comprehensive counseling
-            platform.
-          </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-4">
-            <Button asChild size="lg">
-              <Link href="/register">Get Started</Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild>
-              <Link href="/login">Sign In</Link>
-            </Button>
+      <section className="py-20 px-6 md:px-10 lg:px-20">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-20">
+            <div className="space-y-8">
+              <h1 className="text-6xl md:text-7xl lg:text-8xl font-medium tracking-[-0.02em] leading-[0.95]">
+                YOUR MENTAL WELL-BEING
+              </h1>
+              <p className="text-lg text-black/60 dark:text-white/60 tracking-tight">
+                We offer a wide range of services and products to cater to your specific mental health needs
+              </p>
+              <div className="flex gap-4">
+                <Button className="bg-black dark:bg-white text-white dark:text-black hover:bg-black/80 dark:hover:bg-white/80 rounded-full px-8">
+                  Learn More
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 grid-rows-3 gap-4">
+              <div className="col-span-2 row-span-2 rounded-[2rem] overflow-hidden bg-[#E8D5C4] dark:bg-[#2A2A2A]">
+                <Image
+                  src="/images/hero-1.jpg"
+                  alt="Wellness"
+                  width={600}
+                  height={600}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="rounded-[2rem] bg-[#DCC1B0] dark:bg-[#333333]" />
+              <div className="rounded-[2rem] bg-[#C4A494] dark:bg-[#404040]" />
+              <div className="col-span-2 rounded-[2rem] bg-[#B08968] dark:bg-[#4A4A4A]" />
+            </div>
           </div>
-        </div>
-        <div className="relative h-[400px] md:h-[500px] w-full rounded-xl overflow-hidden shadow-xl">
-          <Image
-            src="/mental-health.png"
-            alt="Online counseling session"
-            fill
-            style={{ objectFit: "cover" }}
-            priority
-          />
         </div>
       </section>
 
       {/* Features Section */}
-      <section
-        id="features"
-        className="py-20 px-6 md:px-10 lg:px-20 bg-muted/30"
-      >
-        <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="text-3xl font-bold text-foreground">
-            Comprehensive Mental Health Support
-          </h2>
-          <p className="mt-4 text-xl text-muted-foreground">
-            Our platform provides everything you need for your mental health
-            journey.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <FeatureCard
-            icon={<UserCircle />}
-            title="Expert Counselors"
-            description="Connect with licensed and experienced mental health professionals specializing in various areas."
-          />
-          <FeatureCard
-            icon={<Calendar />}
-            title="Flexible Scheduling"
-            description="Book sessions at your convenience with our easy-to-use calendar system."
-          />
-          <FeatureCard
-            icon={<MessageSquare />}
-            title="Secure Messaging"
-            description="Communicate with your counselor through our encrypted messaging platform."
-          />
-          <FeatureCard
-            icon={<Shield />}
-            title="Privacy First"
-            description="Your data is protected with industry-leading security measures and strict confidentiality."
-          />
-          <FeatureCard
-            icon={<HeartHandshake />}
-            title="Personalized Care"
-            description="Receive customized treatment plans tailored to your specific needs and goals."
-          />
-          <FeatureCard
-            icon={<CheckCircle2 />}
-            title="Progress Tracking"
-            description="Monitor your improvement with detailed progress reports and insights."
-          />
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section
-        id="how-it-works"
-        className="py-20 px-6 md:px-10 lg:px-20 bg-muted/50"
-      >
-        <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="text-3xl font-bold text-foreground">How It Works</h2>
-          <p className="mt-4 text-xl text-muted-foreground">
-            Start your journey to better mental health in just a few simple
-            steps.
-          </p>
-        </div>
-
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <StepCard
-              number="1"
-              title="Sign Up"
-              description="Create your account and complete a brief assessment to help us understand your needs."
-            />
-            <StepCard
-              number="2"
-              title="Match with a Counselor"
-              description="Get matched with a qualified professional based on your specific requirements."
-            />
-            <StepCard
-              number="3"
-              title="Begin Your Journey"
-              description="Schedule your first session and start working toward better mental health."
-            />
+      <section className="py-20 px-6 md:px-10 lg:px-20 bg-white dark:bg-[#2A2A2A]">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-20">
+            <div className="space-y-8">
+              <h2 className="text-4xl font-medium tracking-tight">Individual Therapy</h2>
+              <p className="text-lg text-black/60 dark:text-white/60 tracking-tight">
+                Collaborate with our trained therapists who will provide personalized guidance and support tailored to your unique circumstances.
+              </p>
+              <div className="flex gap-4">
+                <Button className="bg-black dark:bg-white text-white dark:text-black hover:bg-black/80 dark:hover:bg-white/80 rounded-full px-8">
+                  Book a Session
+                </Button>
+              </div>
+            </div>
+            <div className="aspect-square rounded-[2rem] overflow-hidden">
+              <Image
+                src="/images/therapy.jpg"
+                alt="Therapy session"
+                width={600}
+                height={600}
+                className="w-full h-full object-cover"
+              />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section
-        id="testimonials"
-        className="py-20 px-6 md:px-10 lg:px-20 bg-background"
-      >
-        <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="text-3xl font-bold text-foreground">
-            What Our Clients Say
-          </h2>
-          <p className="mt-4 text-xl text-muted-foreground">
-            Real stories from people who have found support and healing through
-            our platform.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <TestimonialCard
-            quote="Working with my counselor through this platform has completely transformed how I handle anxiety. The scheduling flexibility made it possible for me to fit therapy into my busy life."
-            author="Sarah J."
-          />
-          <TestimonialCard
-            quote="I was skeptical about online counseling at first, but the experience has been incredible. The progress tracking features help me see how far I've come in my journey."
-            author="Michael T."
-          />
-          <TestimonialCard
-            quote="The matching process connected me with exactly the right counselor for my needs. I feel heard and supported in every session."
-            author="Aisha R."
-          />
+      {/* Stats Section */}
+      <section className="py-20 px-6 md:px-10 lg:px-20">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+            <div className="space-y-2">
+              <p className="text-5xl font-medium tracking-tight">24k</p>
+              <p className="text-black/60 dark:text-white/60 tracking-tight">People helped through our services</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-5xl font-medium tracking-tight">98%</p>
+              <p className="text-black/60 dark:text-white/60 tracking-tight">Client satisfaction rate</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-5xl font-medium tracking-tight">50+</p>
+              <p className="text-black/60 dark:text-white/60 tracking-tight">Professional therapists</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-5xl font-medium tracking-tight">15+</p>
+              <p className="text-black/60 dark:text-white/60 tracking-tight">Years of experience</p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6 md:px-10 lg:px-20 bg-primary text-primary-foreground">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl font-bold">Ready to Start Your Journey?</h2>
-          <p className="mt-6 text-xl">
-            Join thousands of others who have taken the first step toward better
-            mental health.
+      <section className="py-20 px-6 md:px-10 lg:px-20 bg-black dark:bg-white text-white dark:text-black">
+        <div className="max-w-[1200px] mx-auto text-center space-y-8">
+          <h2 className="text-4xl md:text-5xl font-medium">
+            The first lesson is free
+          </h2>
+          <p className="text-lg text-white/60 dark:text-black/60 max-w-2xl mx-auto">
+            Take the first step towards better mental health. Book your complimentary session today.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" variant="secondary">
-              <Link href="/register">Create Your Account</Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
-            >
-              <Link href="/login">Sign In</Link>
-            </Button>
-          </div>
+          <Button className="bg-white dark:bg-black text-black dark:text-white hover:bg-white/80 dark:hover:bg-black/80 rounded-full px-8">
+            Get Started
+          </Button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-10 px-6 md:px-10 lg:px-20 bg-muted text-muted-foreground">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <HeartHandshake className="h-8 w-8 text-primary" />
-              <span className="text-xl font-semibold text-foreground">
-                Hope Counseling
-              </span>
+      <footer className="py-20 px-6 md:px-10 lg:px-20">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+            <div className="space-y-4">
+              <Link href="/" className="text-xl font-medium">
+                mental.me
+              </Link>
+              <p className="text-sm text-black/60 dark:text-white/60">
+                A companion for mental wellness
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Providing accessible mental health support for everyone,
-              everywhere.
+            <div className="space-y-4">
+              <h3 className="font-medium">Company</h3>
+              <div className="space-y-2">
+                <Link href="#" className="block text-sm text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white">About</Link>
+                <Link href="#" className="block text-sm text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white">Careers</Link>
+                <Link href="#" className="block text-sm text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white">Contact</Link>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h3 className="font-medium">Resources</h3>
+              <div className="space-y-2">
+                <Link href="#" className="block text-sm text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white">Blog</Link>
+                <Link href="#" className="block text-sm text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white">Newsletter</Link>
+                <Link href="#" className="block text-sm text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white">Events</Link>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h3 className="font-medium">Legal</h3>
+              <div className="space-y-2">
+                <Link href="#" className="block text-sm text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white">Privacy</Link>
+                <Link href="#" className="block text-sm text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white">Terms</Link>
+                <Link href="#" className="block text-sm text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white">Cookies</Link>
+              </div>
+            </div>
+          </div>
+          <div className="mt-20 pt-8 border-t border-black/5 dark:border-white/5">
+            <p className="text-sm text-black/60 dark:text-white/60">
+              © {new Date().getFullYear()} mental.me - All rights reserved.
             </p>
           </div>
-
-          <div>
-            <h3 className="text-foreground font-semibold mb-4">Platform</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="#features" className="text-sm hover:text-primary">
-                  Features
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#how-it-works"
-                  className="text-sm hover:text-primary"
-                >
-                  How It Works
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#testimonials"
-                  className="text-sm hover:text-primary"
-                >
-                  Testimonials
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-foreground font-semibold mb-4">Resources</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="#" className="text-sm hover:text-primary">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-sm hover:text-primary">
-                  FAQs
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-sm hover:text-primary">
-                  Support
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-foreground font-semibold mb-4">Legal</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="#" className="text-sm hover:text-primary">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-sm hover:text-primary">
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-sm hover:text-primary">
-                  Cookie Policy
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto border-t border-border mt-10 pt-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Hope Counseling. All rights reserved.
-          </p>
         </div>
       </footer>
     </div>

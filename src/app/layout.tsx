@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Hope - Mental Health Platform",
+  title: "mental:me",
   description: "A platform connecting clients with mental health professionals",
   keywords: siteConfig.keywords,
   authors: siteConfig.authors,
