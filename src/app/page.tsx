@@ -124,9 +124,9 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <span className="text-sm">Let's connect</span>
             <div className="flex gap-2">
-              <Link href="#" className="w-6 h-6 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs">X</Link>
-              <Link href="#" className="w-6 h-6 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs">In</Link>
-              <Link href="#" className="w-6 h-6 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs">Tg</Link>
+              <Link href="#" aria-label="Twitter/X" className="w-6 h-6 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs">X</Link>
+              <Link href="#" aria-label="LinkedIn" className="w-6 h-6 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs">In</Link>
+              <Link href="#" aria-label="Telegram" className="w-6 h-6 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs">Tg</Link>
             </div>
           </div>
           <Link href="/login">
