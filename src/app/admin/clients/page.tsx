@@ -3,6 +3,17 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import type {
+    Client,
+    ClientStatus,
+    ClientType,
+    ImportRecord,
+    FilterStatus,
+    FilterClientType,
+    Company,
+    Employee,
+    Dependant
+} from '@/types/schema'
 import {
     Download,
     Plus,
@@ -100,10 +111,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 
-// Import mock data
-import { Client } from '@/types/schema'
-import { clients } from './mock-data'
-
 // Client type icon
 const getClientTypeIcon = (clientType: string) => {
     switch (clientType) {
@@ -118,40 +125,18 @@ const getClientTypeIcon = (clientType: string) => {
 
 // Calculate beneficiaries count
 const getBeneficiariesCount = (client: Client) => {
-    if (client.clientType !== 'COMPANY' || !client.beneficiaries) return 0;
-    return client.beneficiaries.length;
+    if (client.clientType !== 'COMPANY' || !client.company?.employees) return 0
+    return client.company.employees.length
 }
 
 // Calculate total dependants count
 const getDependantsCount = (client: Client) => {
-    if (client.clientType === 'COMPANY' && client.beneficiaries) {
-        return client.beneficiaries.reduce((total: number, beneficiary: any) => {
-            return total + (beneficiary.dependants?.length || 0);
-        }, 0);
-    } else if (client.clientType === 'INDIVIDUAL' && client.dependants) {
-        return client.dependants.length;
+    if (client.clientType === 'COMPANY' && client.company?.employees) {
+        return client.company.employees.reduce((total, employee) => {
+            return total + (employee.dependants?.length || 0)
+        }, 0)
     }
-    return 0;
-}
-
-// Add these helper types for the import process
-type ImportRecord = {
-    recordType: 'CLIENT' | 'BENEFICIARY' | 'DEPENDANT';
-    clientId: string;
-    referenceId: string;
-    name: string;
-    email?: string;
-    phone?: string;
-    status?: string;
-    joinDate?: string;
-    lastActive?: string;
-    clientType?: 'COMPANY' | 'INDIVIDUAL';
-    counsellor?: string;
-    notes?: string;
-    relationToId?: string;
-    relation?: string;
-    department?: string;
-    role?: string;
+    return 0
 }
 
 // Define expected column data types
@@ -185,11 +170,15 @@ export default function AdminClientsPage() {
     const router = useRouter()
     const { user } = useAuth()
     const [searchQuery, setSearchQuery] = useState('')
-    const [statusFilter, setStatusFilter] = useState('ALL')
-    const [clientTypeFilter, setClientTypeFilter] = useState('ALL')
+    const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL')
+    const [clientTypeFilter, setClientTypeFilter] = useState<FilterClientType>('ALL')
     const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [itemsPerPage, setItemsPerPage] = useState(5)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
+    const [clients, setClients] = useState<Client[]>([])
+    const [totalClients, setTotalClients] = useState(0)
+    const [totalPages, setTotalPages] = useState(0)
+    const [isLoading, setIsLoading] = useState(true)
 
     // Import related states
     const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
@@ -235,6 +224,9 @@ export default function AdminClientsPage() {
 
     // Define the missing dialog state
     const [showAssignDialog, setShowAssignDialog] = useState(false)
+
+    const [importData, setImportData] = useState<ImportRecord[]>([])
+    const [importStep, setImportStep] = useState(1)
 
     useEffect(() => {
         if (!user || user.role !== 'ADMIN') {
@@ -310,8 +302,6 @@ export default function AdminClientsPage() {
         return filteredClients.slice(startIndex, startIndex + itemsPerPage)
     }, [filteredClients, currentPage, itemsPerPage])
 
-    const totalPages = Math.ceil(filteredClients.length / itemsPerPage)
-
     // Handle bulk selection
     const toggleSelectAll = () => {
         if (selectAll) {
@@ -336,71 +326,71 @@ export default function AdminClientsPage() {
     }
 
     const handleBulkAction = async (action: string) => {
-        if (selectedClients.length === 0) {
-            toast({
-                title: "No clients selected",
-                description: "Please select at least one client to perform this action",
-                variant: "destructive"
-            })
-            return
-        }
-
         try {
             switch (action) {
-                case 'activate':
-                    // Update client status to ACTIVE
-                    const updatedClients = clients.map(client =>
-                        selectedClients.includes(client.id)
-                            ? { ...client, status: 'ACTIVE' }
-                            : client
+                case 'activate': {
+                    const promises = selectedClients.map(id =>
+                        fetch('/api/clients', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id, status: 'ACTIVE' as ClientStatus }),
+                        })
                     )
-                    setClients(updatedClients)
+                    await Promise.all(promises)
+                    setClients(prevClients =>
+                        prevClients.map(client =>
+                            selectedClients.includes(client.id)
+                                ? { ...client, status: 'ACTIVE' as ClientStatus }
+                                : client
+                        )
+                    )
                     toast({
                         title: `${selectedClients.length} clients activated`,
                         description: "The selected clients have been activated",
-                        variant: "default"
                     })
                     break
-
-                case 'deactivate':
-                    // Update client status to INACTIVE
-                    const deactivatedClients = clients.map(client =>
-                        selectedClients.includes(client.id)
-                            ? { ...client, status: 'INACTIVE' }
-                            : client
+                }
+                case 'deactivate': {
+                    const promises = selectedClients.map(id =>
+                        fetch('/api/clients', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id, status: 'INACTIVE' as ClientStatus }),
+                        })
                     )
-                    setClients(deactivatedClients)
+                    await Promise.all(promises)
+                    setClients(prevClients =>
+                        prevClients.map(client =>
+                            selectedClients.includes(client.id)
+                                ? { ...client, status: 'INACTIVE' as ClientStatus }
+                                : client
+                        )
+                    )
                     toast({
                         title: `${selectedClients.length} clients deactivated`,
                         description: "The selected clients have been deactivated",
-                        variant: "default"
                     })
                     break
-
-                case 'export':
-                // Generate CSV content for selected clients
+                }
                 case 'export': {
                     const selectedClientsData = clients.filter(client =>
                         selectedClients.includes(client.id)
                     )
                     const csvContent = generateCSVContent(selectedClientsData)
-                    break;
-                }
                     downloadCSV(csvContent, 'selected-clients.csv')
                     toast({
                         title: "Export successful",
                         description: `Exported ${selectedClients.length} clients to CSV`,
-                        variant: "default"
                     })
                     break
-
-                case 'assign':
-                    // Open assign dialog
-                    setShowAssignDialog(true)
-                    break
-
-                case 'delete':
-                    // Remove selected clients
+                }
+                case 'delete': {
+                    const promises = selectedClients.map(id =>
+                        fetch(`/api/clients?id=${id}`, {
+                            method: 'DELETE',
+                        })
+                    )
+                    await Promise.all(promises)
                     const remainingClients = clients.filter(client =>
                         !selectedClients.includes(client.id)
                     )
@@ -408,29 +398,19 @@ export default function AdminClientsPage() {
                     toast({
                         title: `${selectedClients.length} clients deleted`,
                         description: "The selected clients have been deleted",
-                        variant: "destructive"
                     })
                     break
-
-                default:
-                    toast({
-                        title: "Unknown action",
-                        description: "The selected action is not supported",
-                        variant: "destructive"
-                    })
-                    break
+                }
             }
+            setSelectedClients([])
         } catch (error) {
+            console.error('Error performing bulk action:', error)
             toast({
-                title: "Error",
-                description: "An error occurred while performing the action",
-                variant: "destructive"
+                title: 'Error',
+                description: 'Failed to perform bulk action',
+                variant: 'destructive',
             })
         }
-
-        // Clear selection after action is performed
-        setSelectedClients([])
-        setSelectAll(false)
     }
 
     // Helper function to generate CSV content
@@ -488,48 +468,64 @@ export default function AdminClientsPage() {
     }
 
     // Import related functions
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
-            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0]
+            try {
+                const content = await readCSVFile(file)
+                if (!content) {
+                    throw new Error('Failed to read CSV file')
+                }
+
+                const records = parseCSVData(content)
+                if (!records || records.length === 0) {
+                    toast({
+                        title: "No valid records found",
+                        description: "The CSV file does not contain any valid records",
+                        variant: "destructive"
+                    })
+                    return
+                }
+
+                // Validate records
+                const validRecords = records.filter((record: ImportRecord) => {
+                    return validateCsvData(record)
+                })
+
+                if (validRecords.length === 0) {
+                    toast({
+                        title: "No valid records found",
+                        description: "None of the records in the CSV file are valid",
+                        variant: "destructive"
+                    })
+                    return
+                }
+
+                setImportData(validRecords)
+                setImportStep(2)
+            } catch (error) {
+                console.error('Error processing file:', error)
                 toast({
-                    title: "Invalid file format",
-                    description: "Please upload a CSV file",
+                    title: "Error",
+                    description: "Failed to process the CSV file",
                     variant: "destructive"
                 })
-                return
             }
-
-            setCsvFile(file)
-            setIsProcessingFile(true)
-            readCSVFile(file)
         }
     }
 
-    const readCSVFile = (file: File) => {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            const content = e.target?.result as string
-            if (content) {
-                parseCSVData(content)
-            } else {
-                setIsProcessingFile(false)
-                toast({
-                    title: "Error reading file",
-                    description: "Could not read the file content",
-                    variant: "destructive"
-                })
+    const readCSVFile = async (file: File) => {
+        return new Promise<string | null>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = (e) => {
+                const content = e.target?.result as string
+                resolve(content)
             }
-        }
-        reader.onerror = () => {
-            setIsProcessingFile(false)
-            toast({
-                title: "Error reading file",
-                description: "Failed to read the CSV file",
-                variant: "destructive"
-            })
-        }
-        reader.readAsText(file)
+            reader.onerror = (e) => {
+                reject(e)
+            }
+            reader.readAsText(file)
+        })
     }
 
     // Handle drag and drop functionality
@@ -585,92 +581,23 @@ export default function AdminClientsPage() {
     }, []);
 
     // Advanced CSV handling
-    const parseCSVData = (csvContent: string) => {
-        // Parse the CSV to get records
-        const parsedResult = Papa.parse<ImportRecord>(csvContent, {
-            header: hasHeaderRow,
-            skipEmptyLines: true,
-            transformHeader: (header: string) => header.trim()
-        });
+    const parseCSVData = (csvContent: string): ImportRecord[] => {
+        try {
+            const results = Papa.parse(csvContent, {
+                header: true,
+                skipEmptyLines: true,
+            })
 
-        if (parsedResult.errors.length > 0) {
-            console.error('CSV parsing errors:', parsedResult.errors);
-            toast({
-                title: "CSV parsing error",
-                description: "The file contains invalid data",
-                variant: "destructive"
-            });
-            setIsProcessingFile(false);
-            return;
-        }
-
-        const records = parsedResult.data as ImportRecord[];
-        setHeaderRow(parsedResult.meta.fields || []);
-
-        // Validation
-        const warnings: string[] = [];
-        const dataErrors: Record<number, string[]> = {};
-
-        // Check for required columns
-        if (hasHeaderRow) {
-            const allRequiredColumns = ['recordType', 'referenceId', 'name'];
-            const missingColumns = allRequiredColumns.filter(
-                col => !parsedResult.meta.fields?.includes(col)
-            );
-
-            if (missingColumns.length > 0) {
-                warnings.push(`Missing required columns: ${missingColumns.join(', ')}`);
+            if (results.errors && results.errors.length > 0) {
+                console.error('CSV parsing errors:', results.errors)
+                throw new Error('Failed to parse CSV file')
             }
+
+            return results.data as ImportRecord[]
+        } catch (error) {
+            console.error('Error parsing CSV:', error)
+            return []
         }
-
-        // Check each record for data type and required field errors
-        if (records.length > 0) {
-            records.forEach((record, index) => {
-                const rowErrors: string[] = [];
-
-                // Check record type
-                if (!record.recordType) {
-                    rowErrors.push('Missing recordType');
-                } else if (!['CLIENT', 'BENEFICIARY', 'DEPENDANT'].includes(record.recordType)) {
-                    rowErrors.push(`Invalid recordType "${record.recordType}"`);
-                } else {
-                    // Check required fields for this record type
-                    const requiredForType = requiredFields[record.recordType] || [];
-                    requiredForType.forEach(field => {
-                        if (!record[field as keyof ImportRecord]) {
-                            rowErrors.push(`Missing required field "${field}" for ${record.recordType}`);
-                        }
-                    });
-                }
-
-                // Validate data types
-                Object.entries(record).forEach(([key, value]) => {
-                    if (value && columnDataTypes[key]) {
-                        const type = columnDataTypes[key];
-                        const isValid = validateDataType(value, type);
-                        if (!isValid) {
-                            rowErrors.push(`Invalid data type for "${key}": expected ${type}, got "${value}"`);
-                        }
-                    }
-                });
-
-                // Add row errors to warnings
-                if (rowErrors.length > 0) {
-                    dataErrors[index] = rowErrors;
-                    warnings.push(`Row ${index + 2}: ${rowErrors[0]}${rowErrors.length > 1 ? ` (+${rowErrors.length - 1} more)` : ''}`);
-                }
-            });
-        }
-
-        setValidationWarnings(warnings);
-
-        // Preview first 5 rows
-        setPreviewData(records.slice(0, 5));
-
-        // Store all records and errors for processing on import
-        setCsvRecords(records);
-        setRowErrors(dataErrors);
-        setIsProcessingFile(false);
     }
 
     // Validate data types
@@ -799,36 +726,49 @@ export default function AdminClientsPage() {
     }
 
     const handleConfirmImport = async () => {
+        if (!importData) return
+
         try {
-            // Process import data and create new clients
-            const newClients = importData.map(record => ({
-                id: generateId(),
-                name: record.name,
-                email: record.email || '',
-                phone: record.phone || '',
-                status: record.status || 'ACTIVE',
-                joinDate: record.joinDate || new Date().toISOString(),
-                lastActive: record.lastActive || new Date().toISOString(),
-                clientType: record.clientType,
-                counsellor: record.counsellor || '',
-                notes: record.notes || ''
-            }))
+            const newClients = importData
+                .filter(record => record.recordType === 'CLIENT')
+                .map(record => {
+                    const client: Client = {
+                        id: generateId(),
+                        name: record.name,
+                        email: record.email || '',
+                        phone: record.phone || '',
+                        status: (record.status as ClientStatus) || 'PENDING',
+                        joinDate: record.joinDate || new Date().toISOString(),
+                        lastActive: record.lastActive || new Date().toISOString(),
+                        clientType: (record.clientType as ClientType) || 'INDIVIDUAL',
+                        counsellor: record.counsellor || null,
+                        avatar: null,
+                        appointments: 0,
+                        resources: 0,
+                        isDeleted: false,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        company: null,
+                        sessions: [],
+                        documents: [],
+                        notes: [],
+                        messages: []
+                    }
+                    return client
+                })
 
-            // Update clients state
             setClients(prevClients => [...prevClients, ...newClients])
-
-            // Reset import state
             resetImport()
 
             toast({
                 title: "Import successful",
-                description: `Successfully imported ${newClients.length} clients`,
-                variant: "default"
+                description: `Imported ${newClients.length} clients`,
             })
         } catch (error) {
+            console.error('Error importing clients:', error)
             toast({
                 title: "Import failed",
-                description: "There was an error importing the clients",
+                description: "Failed to import clients",
                 variant: "destructive"
             })
         }
@@ -871,6 +811,86 @@ DEPENDANT,C002,DP002,Lucy Solo,,,ACTIVE,,,,,,CL002,Daughter,,`;
             fileInputRef.current.value = '';
         }
     };
+
+    // Fetch clients
+    const fetchClients = async () => {
+        try {
+            setIsLoading(true)
+            const params = new URLSearchParams({
+                page: currentPage.toString(),
+                limit: itemsPerPage.toString(),
+                search: searchQuery,
+                status: statusFilter,
+                clientType: clientTypeFilter,
+            })
+
+            const response = await fetch(`/api/clients?${params}`)
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to fetch clients')
+            }
+
+            setClients(data.clients)
+            setTotalClients(data.total)
+            setTotalPages(data.totalPages)
+        } catch (error) {
+            console.error('Error fetching clients:', error)
+            toast({
+                title: 'Error',
+                description: 'Failed to fetch clients',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    // Fetch clients when filters or pagination changes
+    useEffect(() => {
+        fetchClients()
+    }, [currentPage, itemsPerPage, searchQuery, statusFilter, clientTypeFilter])
+
+    const handleStatusFilterChange = (value: FilterStatus) => {
+        setStatusFilter(value)
+    }
+
+    const handleClientTypeFilterChange = (value: FilterClientType) => {
+        setClientTypeFilter(value)
+    }
+
+    const getClientInfo = (client: Client) => {
+        return {
+            name: client.name,
+            email: client.email,
+            phone: client.phone || '',
+            status: client.status,
+            joinDate: client.joinDate,
+            lastActive: client.lastActive,
+            clientType: client.clientType,
+            counsellor: client.counsellor || '',
+            appointments: client.appointments,
+            resources: client.resources
+        }
+    }
+
+    const renderClientRow = (client: Client) => {
+        const clientInfo = getClientInfo(client)
+        return (
+            <TableRow key={client.id}>
+                <TableCell>
+                    <Checkbox
+                        checked={selectedClients.includes(client.id)}
+                        onCheckedChange={() => toggleClientSelection(client.id)}
+                    />
+                </TableCell>
+                <TableCell>{clientInfo.name}</TableCell>
+                <TableCell>{clientInfo.email}</TableCell>
+                <TableCell>{clientInfo.phone}</TableCell>
+                {/* ... rest of the row ... */}
+            </TableRow>
+        )
+    }
 
     if (!user) {
         return null
@@ -1975,7 +1995,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                 />
                             </div>
                             <div className="flex items-center gap-2">
-                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                                     <SelectTrigger className="w-[130px] h-9">
                                         <SelectValue placeholder="All Statuses" />
                                     </SelectTrigger>
@@ -1987,7 +2007,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                     </SelectContent>
                                 </Select>
 
-                                <Select value={clientTypeFilter} onValueChange={setClientTypeFilter}>
+                                <Select value={clientTypeFilter} onValueChange={handleClientTypeFilterChange}>
                                     <SelectTrigger className="w-[130px] h-9">
                                         <SelectValue placeholder="All Types" />
                                     </SelectTrigger>

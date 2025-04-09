@@ -38,19 +38,12 @@ export default function SettingsPage() {
                     <CardContent className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="firstName">First Name</Label>
-                                <Input id="firstName" defaultValue={user.firstName} />
+                                <Label htmlFor="name">Name</Label>
+                                <Input id="name" defaultValue={user.name} />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="lastName">Last Name</Label>
-                                <Input id="lastName" defaultValue={user.lastName} />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <div className="flex gap-2">
+                                <Label htmlFor="email">Email</Label>
                                 <Input id="email" defaultValue={user.email} />
-                                <Button variant="outline">Change</Button>
                             </div>
                         </div>
                         <div className="space-y-2">

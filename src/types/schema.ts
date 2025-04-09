@@ -6,6 +6,7 @@
 // Client types
 export type ClientType = 'COMPANY' | 'INDIVIDUAL';
 export type ClientStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED' | 'TERMINATED' | 'ARCHIVED' | 'DELETED' | 'BLOCKED' | 'ON_HOLD';
+export type EmployeeStatus = 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE' | 'TERMINATED';
 
 // Base client model
 export interface Client {
@@ -17,17 +18,18 @@ export interface Client {
     joinDate: string;
     lastActive: string;
     clientType: ClientType;
-    counsellor?: string;
-    avatar?: string;
+    counsellor: string | null;
+    avatar: string | null;
     appointments: number;
     resources: number;
     isDeleted: boolean;
     createdAt: string;
     updatedAt: string;
-    notes?: string;
-    messages?: number;
-    beneficiaries?: Beneficiary[];
-    dependants?: Dependant[];
+    company: Company | null;
+    sessions: Session[];
+    documents: Document[];
+    notes: Note[];
+    messages: Message[];
 }
 
 // Beneficiary model (for company clients)
@@ -44,11 +46,12 @@ export interface Beneficiary {
 // Dependant model (for individual clients or beneficiaries)
 export interface Dependant {
     id: string;
-    name: string;
-    relation: string;
-    parentId: string;
-    parentType: 'CLIENT' | 'BENEFICIARY';
-    status: ClientStatus;
+    relationship: string;
+    isDeleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+    personId: string;
+    employeeId: string;
 }
 
 // Import record types
@@ -87,52 +90,62 @@ export type UserRole = 'ADMIN' | 'COUNSELOR' | 'STAFF';
 // Session model
 export interface Session {
     id: string;
-    clientId: string;
-    counselorId: string;
     date: string;
-    duration: number; // in minutes
+    duration: number;
     status: SessionStatus;
     notes?: string;
     type: SessionType;
+    isDeleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+    clientId: string;
+    counselorId: string;
 }
 
-export type SessionStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
-export type SessionType = 'INITIAL' | 'FOLLOW_UP' | 'EMERGENCY' | 'GROUP';
+export type SessionStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type SessionType = 'INDIVIDUAL' | 'GROUP' | 'WORKSHOP';
 
 // Document model
 export interface Document {
     id: string;
-    clientId: string;
     title: string;
     type: DocumentType;
     url: string;
-    uploadedAt: string;
-    uploadedBy: string;
     size: number;
+    uploadedAt: string;
+    isDeleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+    clientId: string;
+    uploadedById: string;
 }
 
-export type DocumentType = 'CONSENT' | 'ASSESSMENT' | 'REPORT' | 'OTHER';
+export type DocumentType = 'PDF' | 'IMAGE' | 'DOCUMENT' | 'OTHER';
 
 // Note model
 export interface Note {
     id: string;
-    clientId: string;
-    authorId: string;
     content: string;
+    isPrivate: boolean;
+    isDeleted: boolean;
     createdAt: string;
     updatedAt: string;
-    isPrivate: boolean;
+    clientId: string;
+    authorId: string;
 }
 
 // Message model
 export interface Message {
     id: string;
-    clientId: string;
-    senderId: string;
     content: string;
     sentAt: string;
     readAt?: string;
-    attachments?: string[];
+    attachments: string[];
+    isDeleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+    clientId: string;
+    senderId: string;
 }
 
 // Resource model
@@ -146,7 +159,7 @@ export interface Resource {
     createdBy: string;
 }
 
-export type ResourceType = 'ARTICLE' | 'VIDEO' | 'WORKSHOP' | 'TOOL';
+export type ResourceType = 'ARTICLE' | 'VIDEO' | 'AUDIO' | 'OTHER';
 
 // Filter types
 export type FilterType = 'ALL' | 'COMPANIES' | 'INDIVIDUALS' | 'ACTIVE' | 'INACTIVE' | 'RECENT';
@@ -159,4 +172,35 @@ export interface AdvancedFilters {
         from: string;
         to: string;
     };
-} 
+}
+
+export interface Company {
+    id: string;
+    registrationNumber: string;
+    industry?: string;
+    size?: number;
+    website?: string;
+    isDeleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+    clientId: string;
+    employees?: Employee[];
+}
+
+export interface Employee {
+    id: string;
+    employeeNumber: string;
+    jobTitle?: string;
+    department?: string;
+    hireDate: string;
+    status: EmployeeStatus;
+    isDeleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+    personId: string;
+    companyId: string;
+    dependants?: Dependant[];
+}
+
+export type FilterStatus = ClientStatus | 'ALL';
+export type FilterClientType = ClientType | 'ALL'; 

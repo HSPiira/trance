@@ -3,10 +3,13 @@ import { prisma } from './prisma'
 
 // User Role Enum
 export enum UserRole {
-    CLIENT = 'CLIENT',
-    COUNSELLOR = 'COUNSELLOR',
     ADMIN = 'ADMIN',
-    ORG_CONTACT = 'ORG_CONTACT',
+    COUNSELLOR = 'COUNSELLOR',
+    STAFF = 'STAFF',
+    CLIENT = 'CLIENT',
+    MANAGER = 'MANAGER',
+    SUPER_ADMIN = 'SUPER_ADMIN',
+    HR = 'HR'
 }
 
 // Client Type Enum
@@ -17,10 +20,10 @@ export enum ClientType {
 
 // User Status Enum
 export enum UserStatus {
-    PENDING = 'PENDING',
     ACTIVE = 'ACTIVE',
     INACTIVE = 'INACTIVE',
     SUSPENDED = 'SUSPENDED',
+    DELETED = 'DELETED'
 }
 
 // Session Type Enum
@@ -46,18 +49,17 @@ export enum AssessmentStatus {
     EXPIRED = 'EXPIRED',
 }
 
-// Zod schemas for validation
+// Base user schema
 export const userSchema = z.object({
-    id: z.string().optional(),
+    id: z.string().uuid(),
     email: z.string().email(),
-    password: z.string().min(8),
-    firstName: z.string().min(1),
-    lastName: z.string().min(1),
-    phoneNumber: z.string().optional(),
+    name: z.string(),
     role: z.nativeEnum(UserRole),
-    status: z.nativeEnum(UserStatus).default(UserStatus.PENDING),
-    createdAt: z.date().optional(),
-    updatedAt: z.date().optional(),
+    isDeleted: z.boolean(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+    password: z.string(),
+    avatar: z.string().optional(),
 })
 
 export const clientProfileSchema = z.object({
@@ -161,7 +163,7 @@ export const clientAssessmentSchema = z.object({
     updatedAt: z.date().optional(),
 })
 
-// Types derived from schemas
+// Export types
 export type User = z.infer<typeof userSchema>
 export type ClientProfile = z.infer<typeof clientProfileSchema>
 export type CounsellorProfile = z.infer<typeof counsellorProfileSchema>
