@@ -10,6 +10,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { BackButton } from '@/components/ui/back-button'
+import { Inter } from 'next/font/google'
+import { useTheme } from 'next-themes'
+
+const inter = Inter({
+    subsets: ['latin'],
+    variable: '--font-inter',
+})
 
 export default function LoginPage() {
     const router = useRouter()
@@ -17,24 +24,20 @@ export default function LoginPage() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const { theme, setTheme } = useTheme()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        console.log('Form submission prevented')
         setError('')
         setLoading(true)
 
         if (!email || !password) {
-            console.log('Missing email or password')
             setError('Please enter both email and password')
             setLoading(false)
             return
         }
 
-        console.log('Attempting login with email:', email)
-
         try {
-            console.log('Preparing to send login request...')
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
@@ -44,50 +47,14 @@ export default function LoginPage() {
                 credentials: 'include',
             })
 
-            console.log('Login response status:', response.status)
-
             const data = await response.json()
 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to login')
             }
 
-            // Check for cookies
-            const cookies = document.cookie
-            console.log('Cookies after login:', cookies)
-
-            // Use the redirect URL from the API response
-            console.log('Login successful, redirecting to:', data.redirectUrl)
-
-            // Wait a moment for the cookie to be set
-            await new Promise(resolve => setTimeout(resolve, 500))
-
-            // Check cookies again after delay
-            console.log('Cookies after delay:', document.cookie)
-
-            // Try different navigation methods
-            try {
-                // First try router.push
-                router.push(data.redirectUrl)
-
-                // If router.push doesn't work after 500ms, try window.location
-                setTimeout(() => {
-                    // Check cookies before redirect
-                    console.log('Cookies before window.location redirect:', document.cookie)
-                    const baseUrl = window.location.origin
-                    const fullUrl = `${baseUrl}${data.redirectUrl}`
-                    console.log('Router push may have failed, trying window.location:', fullUrl)
-                    window.location.href = fullUrl
-                }, 500)
-            } catch (navErr) {
-                console.error('Navigation error:', navErr)
-                // Fallback to window.location
-                const baseUrl = window.location.origin
-                const fullUrl = `${baseUrl}${data.redirectUrl}`
-                window.location.href = fullUrl
-            }
+            router.push(data.redirectUrl)
         } catch (err) {
-            console.error('Login error:', err)
             setError(err instanceof Error ? err.message : 'An error occurred during login')
         } finally {
             setLoading(false)
@@ -95,30 +62,26 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-            <div className="w-full max-w-md">
-                <div className="flex items-center justify-center mb-6">
-                    <Link href="/" className="flex items-center gap-2 text-primary hover:text-primary/80">
+        <div className={`${inter.variable} font-sans min-h-screen bg-[#F5EDE3] dark:bg-[#1F1F1F] text-[#1F1F1F] dark:text-[#F5EDE3] flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8`}>
+            <div className="w-full max-w-md space-y-8">
+                <div className="text-center space-y-6">
+                    <Link href="/" className="inline-flex items-center gap-2 text-2xl font-medium tracking-tight">
                         <HeartHandshake className="h-8 w-8" />
-                        <span className="text-xl font-semibold">Hope Counseling</span>
+                        mental.me
                     </Link>
+                    <h1 className="text-4xl font-medium tracking-tight">Welcome back</h1>
                 </div>
-                <Card>
-                    <CardHeader className="space-y-1">
-                        <CardTitle className="text-2xl font-bold">Login</CardTitle>
-                        <CardDescription>
-                            Enter your email and password to access your account
-                        </CardDescription>
-                    </CardHeader>
+
+                <Card className="border-none shadow-lg bg-white/80 dark:bg-[#2A2A2A]/80 backdrop-blur-sm">
                     <form onSubmit={handleSubmit}>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4 pt-6">
                             {error && (
-                                <Alert variant="destructive">
+                                <Alert variant="destructive" className="bg-red-50/50 dark:bg-red-950/50 backdrop-blur-sm">
                                     <AlertDescription>{error}</AlertDescription>
                                 </Alert>
                             )}
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -126,14 +89,15 @@ export default function LoginPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
+                                    className="bg-white/50 dark:bg-[#1F1F1F]/50 backdrop-blur-sm border-black/5 dark:border-white/5"
                                 />
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label htmlFor="password">Password</Label>
+                                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                                     <Link
                                         href="/forgot-password"
-                                        className="text-sm text-blue-600 hover:text-blue-500"
+                                        className="text-sm hover:text-black/60 dark:hover:text-white/60 transition-colors"
                                     >
                                         Forgot password?
                                     </Link>
@@ -144,11 +108,16 @@ export default function LoginPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
+                                    className="bg-white/50 dark:bg-[#1F1F1F]/50 backdrop-blur-sm border-black/5 dark:border-white/5"
                                 />
                             </div>
                         </CardContent>
-                        <CardFooter className="flex flex-col space-y-4">
-                            <Button type="submit" className="w-full" disabled={loading}>
+                        <CardFooter className="flex flex-col space-y-4 pb-6">
+                            <Button
+                                type="submit"
+                                className="w-full bg-black dark:bg-white text-white dark:text-black hover:bg-black/80 dark:hover:bg-white/80 rounded-full"
+                                disabled={loading}
+                            >
                                 {loading ? 'Logging in...' : 'Login'}
                             </Button>
                             <div className="flex flex-col sm:flex-row justify-center gap-4 text-center text-sm">
@@ -156,24 +125,31 @@ export default function LoginPage() {
                                     Don't have an account?{' '}
                                     <Link
                                         href="/register"
-                                        className="text-blue-600 hover:text-blue-500"
+                                        className="hover:text-black/60 dark:hover:text-white/60 transition-colors"
                                     >
                                         Register
                                     </Link>
                                 </div>
-                                <div className="flex justify-center">
-                                    <BackButton
-                                        href="/"
-                                        tooltip="Back to Home"
-                                        variant="link"
-                                        size="sm"
-                                        className="p-0 h-auto text-blue-600 hover:text-blue-500"
-                                    />
-                                </div>
+                                <Link
+                                    href="/"
+                                    className="inline-flex items-center hover:text-black/60 dark:hover:text-white/60 transition-colors"
+                                >
+                                    <ArrowLeft className="mr-1 h-4 w-4" />
+                                    Back to Home
+                                </Link>
                             </div>
                         </CardFooter>
                     </form>
                 </Card>
+
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-4 right-4"
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                >
+                    {theme === "dark" ? "🌞" : "🌙"}
+                </Button>
             </div>
         </div>
     )

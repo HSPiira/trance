@@ -78,24 +78,20 @@ export async function getUserFromRequest(req: NextRequest): Promise<User | null>
         return null
     }
 
-    try {
-        // Get the user from the database
-        const user = await prisma.user.findUnique({
-            where: { id: decoded.id as string },
-            include: {
-                documents: true,
-                messages: true,
-                notes: true,
-                resources: true,
-                sessions: true
-            }
-        })
+    // Get the user from the database
+    const user = await prisma.user.findUnique({
+        where: { id: decoded.id as string },
+        include: {
+            documents: true,
+            messages: true,
+            notes: true,
+            resources: true,
+            sessions: true,
+            auditLogs: true
+        }
+    })
 
-        return user
-    } catch (error) {
-        console.error('Error fetching user:', error)
-        return null
-    }
+    return user
 }
 
 // Get the current user from the request
@@ -112,46 +108,30 @@ export async function getCurrentUser() {
         return null
     }
 
-    try {
-        const user = await prisma.user.findUnique({
-            where: { id: decoded.id as string },
-            include: {
-                documents: true,
-                messages: true,
-                notes: true,
-                resources: true,
-                sessions: true
-            }
-        })
+    const user = await prisma.user.findUnique({
+        where: { id: decoded.id as string },
+        include: {
+            documents: true,
+            messages: true,
+            notes: true,
+            resources: true,
+            sessions: true,
+            auditLogs: true
+        }
+    })
 
-        return user
-    } catch (error) {
-        console.error('Error fetching current user:', error)
-        return null
-    }
+    return user
 }
 
 // Create an audit log entry
 export async function createAuditLog(userId: string, action: string, details?: any) {
-    try {
-        // Check if the auditLog model exists
-        if (!prisma.auditLog) {
-            console.warn('AuditLog model not available in Prisma client')
-            return null
-        }
-
-        return await prisma.auditLog.create({
-            data: {
-                userId: userId,
-                action: action,
-                entityType: 'USER',
-                entityId: userId,
-                details: details || null,
-            },
-        })
-    } catch (error) {
-        console.error('Error creating audit log:', error)
-        // Don't throw the error to prevent breaking the login flow
-        return null
-    }
+    return prisma.auditLog.create({
+        data: {
+            userId: userId,
+            action: action,
+            entityType: 'USER',
+            entityId: userId,
+            details: details || null,
+        },
+    })
 }
