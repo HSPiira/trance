@@ -103,8 +103,8 @@ export interface Dependant {
 }
 
 export type EmployeeStatus = 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE' | 'TERMINATED'
-export type SessionStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
-export type SessionType = 'INDIVIDUAL' | 'GROUP' | 'WORKSHOP'
+export type SessionStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'RESCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW'
+export type SessionType = 'INITIAL' | 'FOLLOW_UP' | 'EMERGENCY' | 'GROUP'
 
 export interface ImportRecord {
     recordType: 'CLIENT' | 'BENEFICIARY' | 'DEPENDANT'
