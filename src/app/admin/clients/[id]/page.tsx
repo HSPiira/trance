@@ -112,7 +112,7 @@ export default function ClientPage({ params }: { params: { id: string } }) {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <User className="h-4 w-4 text-muted-foreground" />
-                                    <span>{(client as any).counsellor || 'No counselor assigned'}</span>
+                                    <span>{client.counsellor || 'No counselor assigned'}</span>
                                 </div>
                             </CardContent>
                         </Card>
