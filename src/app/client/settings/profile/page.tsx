@@ -176,7 +176,7 @@ export default function ClientProfileSettings() {
                                         Full Name
                                     </Label>
                                     <div className="text-sm font-medium" id="name">
-                                        {isLoading ? 'Loading...' : `${profile?.user?.firstName} ${profile?.user?.lastName}`}
+                                        {isLoading ? 'Loading...' : user?.name}
                                     </div>
                                 </div>
                                 <div>

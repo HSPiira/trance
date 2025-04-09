@@ -40,7 +40,7 @@ export default function ClientDashboard() {
         <DashboardLayout>
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user.firstName}!</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user.name}!</h1>
                     <p className="text-sm text-gray-500">Last login: Today at 9:30 AM</p>
                 </div>
 

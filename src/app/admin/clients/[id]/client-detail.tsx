@@ -59,28 +59,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
 import { BackButton } from '@/components/ui/back-button'
-
-// Import from a shared definitions file to avoid duplication
-import { Dependant, Beneficiary } from '@/app/admin/clients/mock-data'
-
-type Client = {
-    id: string;
-    name: string;
-    email: string;
-    status: string;
-    joinDate: string;
-    lastActive: string;
-    avatar?: string;
-    phone?: string;
-    clientType: string;
-    appointments: number;
-    messages: number;
-    resources: number;
-    counsellor?: string;
-    notes?: string;
-    beneficiaries?: Beneficiary[];
-    dependants?: Dependant[];
-}
+import { Client, Beneficiary, Dependant } from '@/types/schema'
 
 interface ClientDetailProps {
     client: Client;

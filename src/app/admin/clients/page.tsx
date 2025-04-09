@@ -3,6 +3,17 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import type {
+    Client,
+    ClientStatus,
+    ClientType,
+    ImportRecord,
+    FilterStatus,
+    FilterClientType,
+    Company,
+    Employee,
+    Dependant
+} from '@/types/schema'
 import {
     Download,
     Plus,
@@ -100,9 +111,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 
-// Import mock data
-import { Client, clients } from './mock-data'
-
 // Client type icon
 const getClientTypeIcon = (clientType: string) => {
     switch (clientType) {
@@ -117,40 +125,18 @@ const getClientTypeIcon = (clientType: string) => {
 
 // Calculate beneficiaries count
 const getBeneficiariesCount = (client: Client) => {
-    if (client.clientType !== 'COMPANY' || !client.beneficiaries) return 0;
-    return client.beneficiaries.length;
+    if (client.clientType !== 'COMPANY' || !client.company?.employees) return 0
+    return client.company.employees.length
 }
 
 // Calculate total dependants count
 const getDependantsCount = (client: Client) => {
-    if (client.clientType === 'COMPANY' && client.beneficiaries) {
-        return client.beneficiaries.reduce((total: number, beneficiary: any) => {
-            return total + (beneficiary.dependants?.length || 0);
-        }, 0);
-    } else if (client.clientType === 'INDIVIDUAL' && client.dependants) {
-        return client.dependants.length;
+    if (client.clientType === 'COMPANY' && client.company?.employees) {
+        return client.company.employees.reduce((total, employee) => {
+            return total + (employee.dependants?.length || 0)
+        }, 0)
     }
-    return 0;
-}
-
-// Add these helper types for the import process
-type ImportRecord = {
-    recordType: 'CLIENT' | 'BENEFICIARY' | 'DEPENDANT';
-    clientId: string;
-    referenceId: string;
-    name: string;
-    email?: string;
-    phone?: string;
-    status?: string;
-    joinDate?: string;
-    lastActive?: string;
-    clientType?: 'COMPANY' | 'INDIVIDUAL';
-    counsellor?: string;
-    notes?: string;
-    relationToId?: string;
-    relation?: string;
-    department?: string;
-    role?: string;
+    return 0
 }
 
 // Define expected column data types
@@ -184,11 +170,15 @@ export default function AdminClientsPage() {
     const router = useRouter()
     const { user } = useAuth()
     const [searchQuery, setSearchQuery] = useState('')
-    const [statusFilter, setStatusFilter] = useState('ALL')
-    const [clientTypeFilter, setClientTypeFilter] = useState('ALL')
+    const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL')
+    const [clientTypeFilter, setClientTypeFilter] = useState<FilterClientType>('ALL')
     const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [itemsPerPage, setItemsPerPage] = useState(5)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
+    const [clients, setClients] = useState<Client[]>([])
+    const [totalClients, setTotalClients] = useState(0)
+    const [totalPages, setTotalPages] = useState(0)
+    const [isLoading, setIsLoading] = useState(true)
 
     // Import related states
     const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
@@ -221,9 +211,22 @@ export default function AdminClientsPage() {
     // Bulk actions state
     const [selectedClients, setSelectedClients] = useState<string[]>([])
     const [selectAll, setSelectAll] = useState(false)
-    const [showCounselorDialog, setShowCounselorDialog] = useState(false)
 
-    const [clients, setClients] = useState<Client[]>([])
+    // Advanced filters state
+    const [advancedFilters, setAdvancedFilters] = useState({
+        status: '',
+        clientType: '',
+        dateRange: {
+            from: '',
+            to: ''
+        }
+    })
+
+    // Define the missing dialog state
+    const [showAssignDialog, setShowAssignDialog] = useState(false)
+
+    const [importData, setImportData] = useState<ImportRecord[]>([])
+    const [importStep, setImportStep] = useState(1)
 
     useEffect(() => {
         if (!user || user.role !== 'ADMIN') {
@@ -231,71 +234,73 @@ export default function AdminClientsPage() {
         }
     }, [router, user])
 
-    // Filter clients based on search and filters
+    // Add helper function for case-insensitive filter comparison
+    const normalizeFilterValue = (value: string) => value.toUpperCase();
+
+    // Filter and search functionality
     const filteredClients = useMemo(() => {
-        let result = [...clients];
-
-        // Combine all filters into a single pass
-        result = result.filter(client => {
-            // Search filter - check multiple fields
+        return clients.filter(client => {
+            // Apply search filter
             if (searchQuery) {
-                const searchLower = searchQuery.toLowerCase();
-                const searchableFields = [
-                    client.name,
-                    client.email,
-                    client.phone,
-                    client.status,
-                    client.clientType
-                ].map(field => (field || '').toLowerCase());
+                const query = searchQuery.toLowerCase();
+                const matchesSearch = (
+                    client.name.toLowerCase().includes(query) ||
+                    client.email.toLowerCase().includes(query) ||
+                    client.phone.toLowerCase().includes(query) ||
+                    client.clientType.toLowerCase().includes(query) ||
+                    client.status.toLowerCase().includes(query)
+                );
+                if (!matchesSearch) return false;
+            }
 
-                if (!searchableFields.some(field => field.includes(searchLower))) {
-                    return false;
+            // Apply quick filters
+            if (filter !== 'ALL') {
+                switch (filter) {
+                    case 'COMPANIES':
+                        if (normalizeFilterValue(client.clientType) !== 'COMPANY') return false;
+                        break;
+                    case 'INDIVIDUALS':
+                        if (normalizeFilterValue(client.clientType) !== 'INDIVIDUAL') return false;
+                        break;
+                    case 'ACTIVE':
+                        if (normalizeFilterValue(client.status) !== 'ACTIVE') return false;
+                        break;
+                    case 'INACTIVE':
+                        if (normalizeFilterValue(client.status) !== 'INACTIVE') return false;
+                        break;
+                    case 'RECENT':
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        if (new Date(client.lastActive) < thirtyDaysAgo) return false;
+                        break;
                 }
             }
 
-            // Status filter
-            if (statusFilter !== "ALL" && client.status !== statusFilter) {
-                return false;
+            // Apply advanced filters
+            if (advancedFilters.status && advancedFilters.status !== 'all') {
+                if (normalizeFilterValue(client.status) !== normalizeFilterValue(advancedFilters.status)) return false;
             }
-
-            // Client type filter
-            if (clientTypeFilter !== "ALL" && client.clientType !== clientTypeFilter) {
-                return false;
+            if (advancedFilters.clientType && advancedFilters.clientType !== 'all') {
+                if (normalizeFilterValue(client.clientType) !== normalizeFilterValue(advancedFilters.clientType)) return false;
             }
-
-            // Quick filter
-            switch (filter) {
-                case 'COMPANIES':
-                    if (client.clientType !== 'COMPANY') return false;
-                    break;
-                case 'INDIVIDUALS':
-                    if (client.clientType !== 'INDIVIDUAL') return false;
-                    break;
-                case 'ACTIVE':
-                    if (client.status !== 'ACTIVE') return false;
-                    break;
-                case 'INACTIVE':
-                    if (client.status !== 'INACTIVE') return false;
-                    break;
-                case 'RECENT':
-                    try {
-                        const lastActive = new Date(client.lastActive);
-                        if (isNaN(lastActive.getTime())) return false;
-
-                        const now = new Date();
-                        const diffDays = Math.ceil((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
-                        if (diffDays > 30) return false;
-                    } catch (error) {
-                        return false;
-                    }
-                    break;
+            if (advancedFilters.dateRange.from) {
+                const fromDate = new Date(advancedFilters.dateRange.from);
+                if (new Date(client.joinDate) < fromDate) return false;
+            }
+            if (advancedFilters.dateRange.to) {
+                const toDate = new Date(advancedFilters.dateRange.to);
+                if (new Date(client.joinDate) > toDate) return false;
             }
 
             return true;
         });
+    }, [clients, filter, searchQuery, advancedFilters]);
 
-        return result;
-    }, [clients, searchQuery, statusFilter, clientTypeFilter, filter]);
+    // Pagination
+    const paginatedClients = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage
+        return filteredClients.slice(startIndex, startIndex + itemsPerPage)
+    }, [filteredClients, currentPage, itemsPerPage])
 
     // Handle bulk selection
     const toggleSelectAll = () => {
@@ -321,148 +326,117 @@ export default function AdminClientsPage() {
     }
 
     const handleBulkAction = async (action: string) => {
-        if (selectedClients.length === 0) {
-            toast({
-                title: "No clients selected",
-                description: "Please select at least one client to perform this action",
-                variant: "destructive"
-            })
-            return
-        }
-
         try {
             switch (action) {
-                case 'activate':
-                    // Update client status to ACTIVE
-                    const updatedClients = clients.map(client =>
-                        selectedClients.includes(client.id)
-                            ? { ...client, status: 'ACTIVE' }
-                            : client
+                case 'activate': {
+                    const promises = selectedClients.map(id =>
+                        fetch('/api/clients', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id, status: 'ACTIVE' as ClientStatus }),
+                        })
                     )
-                    setClients(updatedClients)
+                    await Promise.all(promises)
+                    setClients(prevClients =>
+                        prevClients.map(client =>
+                            selectedClients.includes(client.id)
+                                ? { ...client, status: 'ACTIVE' as ClientStatus }
+                                : client
+                        )
+                    )
                     toast({
                         title: `${selectedClients.length} clients activated`,
                         description: "The selected clients have been activated",
-                        variant: "default"
                     })
                     break
-
-                case 'deactivate':
-                    // Update client status to INACTIVE
-                    const deactivatedClients = clients.map(client =>
-                        selectedClients.includes(client.id)
-                            ? { ...client, status: 'INACTIVE' }
-                            : client
+                }
+                case 'deactivate': {
+                    const promises = selectedClients.map(id =>
+                        fetch('/api/clients', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id, status: 'INACTIVE' as ClientStatus }),
+                        })
                     )
-                    setClients(deactivatedClients)
+                    await Promise.all(promises)
+                    setClients(prevClients =>
+                        prevClients.map(client =>
+                            selectedClients.includes(client.id)
+                                ? { ...client, status: 'INACTIVE' as ClientStatus }
+                                : client
+                        )
+                    )
                     toast({
                         title: `${selectedClients.length} clients deactivated`,
                         description: "The selected clients have been deactivated",
-                        variant: "default"
                     })
                     break
-
-                case 'export':
-                    // Prepare CSV data for export
-                    const exportData = clients
-                        .filter(client => selectedClients.includes(client.id))
-                        .map(client => ({
-                            name: client.name || '',
-                            email: client.email || '',
-                            phone: client.phone || '',
-                            status: client.status || '',
-                            clientType: client.clientType || '',
-                            joinDate: client.joinDate || '',
-                            lastActive: client.lastActive || '',
-                            notes: client.notes || ''
-                        }))
-
-                    if (exportData.length === 0) {
-                        toast({
-                            title: "Export failed",
-                            description: "No data available to export",
-                            variant: "destructive"
-                        })
-                        return
-                    }
-
-                    // Convert to CSV
-                    const headers = Object.keys(exportData[0] as Record<string, string>)
-                    const csvContent = [
-                        headers.join(','),
-                        ...exportData.map(row =>
-                            headers.map(header =>
-                                JSON.stringify(row[header as keyof typeof row])
-                            ).join(',')
-                        )
-                    ].join('\n')
-
-                    // Create and trigger download
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-                    const link = document.createElement('a')
-                    link.href = URL.createObjectURL(blob)
-                    link.download = `clients_export_${new Date().toISOString().split('T')[0]}.csv`
-                    link.click()
-                    URL.revokeObjectURL(link.href)
-
+                }
+                case 'export': {
+                    const selectedClientsData = clients.filter(client =>
+                        selectedClients.includes(client.id)
+                    )
+                    const csvContent = generateCSVContent(selectedClientsData)
+                    downloadCSV(csvContent, 'selected-clients.csv')
                     toast({
                         title: "Export successful",
-                        description: `${selectedClients.length} clients exported to CSV`,
-                        variant: "default"
+                        description: `Exported ${selectedClients.length} clients to CSV`,
                     })
                     break
-
-                case 'assign':
-                    // Open counselor selection dialog
-                    setShowCounselorDialog(true)
-                    toast({
-                        title: "Assign clients",
-                        description: `Please select a counselor to assign ${selectedClients.length} clients`,
-                        variant: "default"
-                    })
-                    break
-
-                case 'delete':
-                    // Remove selected clients
-                    const remainingClients = clients.filter(
-                        client => !selectedClients.includes(client.id)
+                }
+                case 'delete': {
+                    const promises = selectedClients.map(id =>
+                        fetch(`/api/clients?id=${id}`, {
+                            method: 'DELETE',
+                        })
+                    )
+                    await Promise.all(promises)
+                    const remainingClients = clients.filter(client =>
+                        !selectedClients.includes(client.id)
                     )
                     setClients(remainingClients)
                     toast({
                         title: `${selectedClients.length} clients deleted`,
                         description: "The selected clients have been deleted",
-                        variant: "destructive"
                     })
                     break
-
-                default:
-                    toast({
-                        title: "Unknown action",
-                        description: "The selected action is not supported",
-                        variant: "destructive"
-                    })
-                    break
+                }
             }
+            setSelectedClients([])
         } catch (error) {
             console.error('Error performing bulk action:', error)
             toast({
-                title: "Error",
-                description: "An error occurred while performing the action",
-                variant: "destructive"
+                title: 'Error',
+                description: 'Failed to perform bulk action',
+                variant: 'destructive',
             })
         }
-
-        // Clear selection after action is performed
-        setSelectedClients([])
-        setSelectAll(false)
     }
 
-    // Pagination
-    const totalPages = Math.ceil(filteredClients.length / itemsPerPage)
-    const paginatedClients = filteredClients.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    )
+    // Helper function to generate CSV content
+    const generateCSVContent = (clients: Client[]) => {
+        const headers = ['ID', 'Name', 'Email', 'Phone', 'Status', 'Type', 'Join Date', 'Last Active']
+        const rows = clients.map(client => [
+            client.id,
+            client.name,
+            client.email,
+            client.phone,
+            client.status,
+            client.clientType,
+            client.joinDate,
+            client.lastActive
+        ])
+        return [headers, ...rows].map(row => row.join(',')).join('\n')
+    }
+
+    // Helper function to download CSV
+    const downloadCSV = (content: string, filename: string) => {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = filename
+        link.click()
+    }
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page)
@@ -494,48 +468,64 @@ export default function AdminClientsPage() {
     }
 
     // Import related functions
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
-            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0]
+            try {
+                const content = await readCSVFile(file)
+                if (!content) {
+                    throw new Error('Failed to read CSV file')
+                }
+
+                const records = parseCSVData(content)
+                if (!records || records.length === 0) {
+                    toast({
+                        title: "No valid records found",
+                        description: "The CSV file does not contain any valid records",
+                        variant: "destructive"
+                    })
+                    return
+                }
+
+                // Validate records
+                const validRecords = records.filter((record: ImportRecord) => {
+                    return validateCsvData(record)
+                })
+
+                if (validRecords.length === 0) {
+                    toast({
+                        title: "No valid records found",
+                        description: "None of the records in the CSV file are valid",
+                        variant: "destructive"
+                    })
+                    return
+                }
+
+                setImportData(validRecords)
+                setImportStep(2)
+            } catch (error) {
+                console.error('Error processing file:', error)
                 toast({
-                    title: "Invalid file format",
-                    description: "Please upload a CSV file",
+                    title: "Error",
+                    description: "Failed to process the CSV file",
                     variant: "destructive"
                 })
-                return
             }
-
-            setCsvFile(file)
-            setIsProcessingFile(true)
-            readCSVFile(file)
         }
     }
 
-    const readCSVFile = (file: File) => {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            const content = e.target?.result as string
-            if (content) {
-                parseCSVData(content)
-            } else {
-                setIsProcessingFile(false)
-                toast({
-                    title: "Error reading file",
-                    description: "Could not read the file content",
-                    variant: "destructive"
-                })
+    const readCSVFile = async (file: File) => {
+        return new Promise<string | null>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = (e) => {
+                const content = e.target?.result as string
+                resolve(content)
             }
-        }
-        reader.onerror = () => {
-            setIsProcessingFile(false)
-            toast({
-                title: "Error reading file",
-                description: "Failed to read the CSV file",
-                variant: "destructive"
-            })
-        }
-        reader.readAsText(file)
+            reader.onerror = (e) => {
+                reject(e)
+            }
+            reader.readAsText(file)
+        })
     }
 
     // Handle drag and drop functionality
@@ -591,92 +581,23 @@ export default function AdminClientsPage() {
     }, []);
 
     // Advanced CSV handling
-    const parseCSVData = (csvContent: string) => {
-        // Parse the CSV to get records
-        const parsedResult = Papa.parse<ImportRecord>(csvContent, {
-            header: hasHeaderRow,
-            skipEmptyLines: true,
-            transformHeader: (header: string) => header.trim()
-        });
+    const parseCSVData = (csvContent: string): ImportRecord[] => {
+        try {
+            const results = Papa.parse(csvContent, {
+                header: true,
+                skipEmptyLines: true,
+            })
 
-        if (parsedResult.errors.length > 0) {
-            console.error('CSV parsing errors:', parsedResult.errors);
-            toast({
-                title: "CSV parsing error",
-                description: "The file contains invalid data",
-                variant: "destructive"
-            });
-            setIsProcessingFile(false);
-            return;
-        }
-
-        const records = parsedResult.data as ImportRecord[];
-        setHeaderRow(parsedResult.meta.fields || []);
-
-        // Validation
-        const warnings: string[] = [];
-        const dataErrors: Record<number, string[]> = {};
-
-        // Check for required columns
-        if (hasHeaderRow) {
-            const allRequiredColumns = ['recordType', 'referenceId', 'name'];
-            const missingColumns = allRequiredColumns.filter(
-                col => !parsedResult.meta.fields?.includes(col)
-            );
-
-            if (missingColumns.length > 0) {
-                warnings.push(`Missing required columns: ${missingColumns.join(', ')}`);
+            if (results.errors && results.errors.length > 0) {
+                console.error('CSV parsing errors:', results.errors)
+                throw new Error('Failed to parse CSV file')
             }
+
+            return results.data as ImportRecord[]
+        } catch (error) {
+            console.error('Error parsing CSV:', error)
+            return []
         }
-
-        // Check each record for data type and required field errors
-        if (records.length > 0) {
-            records.forEach((record, index) => {
-                const rowErrors: string[] = [];
-
-                // Check record type
-                if (!record.recordType) {
-                    rowErrors.push('Missing recordType');
-                } else if (!['CLIENT', 'BENEFICIARY', 'DEPENDANT'].includes(record.recordType)) {
-                    rowErrors.push(`Invalid recordType "${record.recordType}"`);
-                } else {
-                    // Check required fields for this record type
-                    const requiredForType = requiredFields[record.recordType] || [];
-                    requiredForType.forEach(field => {
-                        if (!record[field as keyof ImportRecord]) {
-                            rowErrors.push(`Missing required field "${field}" for ${record.recordType}`);
-                        }
-                    });
-                }
-
-                // Validate data types
-                Object.entries(record).forEach(([key, value]) => {
-                    if (value && columnDataTypes[key]) {
-                        const type = columnDataTypes[key];
-                        const isValid = validateDataType(value, type);
-                        if (!isValid) {
-                            rowErrors.push(`Invalid data type for "${key}": expected ${type}, got "${value}"`);
-                        }
-                    }
-                });
-
-                // Add row errors to warnings
-                if (rowErrors.length > 0) {
-                    dataErrors[index] = rowErrors;
-                    warnings.push(`Row ${index + 2}: ${rowErrors[0]}${rowErrors.length > 1 ? ` (+${rowErrors.length - 1} more)` : ''}`);
-                }
-            });
-        }
-
-        setValidationWarnings(warnings);
-
-        // Preview first 5 rows
-        setPreviewData(records.slice(0, 5));
-
-        // Store all records and errors for processing on import
-        setCsvRecords(records);
-        setRowErrors(dataErrors);
-        setIsProcessingFile(false);
     }
 
     // Validate data types
@@ -698,263 +619,159 @@ export default function AdminClientsPage() {
     }
 
     const handleImport = async () => {
-        if (!csvFile && !csvRecords.length) {
+        if (!csvFile) {
             toast({
-                title: "No data to import",
-                description: "Please upload or paste client data",
+                title: "No file selected",
+                description: "Please select a CSV file to import",
                 variant: "destructive"
-            });
-            return;
+            })
+            return
         }
-
-        // Check all records for missing required fields
-        let requiredFieldsErrors = 0;
-        let dataTypeErrors = 0;
-        let otherErrors = 0;
-
-        // Collect detailed errors
-        const recordErrors: { row: number, errors: string[] }[] = [];
-
-        csvRecords.forEach((record, index) => {
-            const errors: string[] = [];
-
-            // Check record type
-            if (!record.recordType) {
-                errors.push('Missing recordType');
-                requiredFieldsErrors++;
-            } else if (!['CLIENT', 'BENEFICIARY', 'DEPENDANT'].includes(record.recordType)) {
-                errors.push(`Invalid recordType "${record.recordType}"`);
-                requiredFieldsErrors++;
-            } else {
-                // Check required fields based on record type
-                const requiredForType = requiredFields[record.recordType] || [];
-                requiredForType.forEach(field => {
-                    if (!record[field as keyof ImportRecord]) {
-                        errors.push(`Missing required field "${field}" for ${record.recordType}`);
-                        requiredFieldsErrors++;
-                    }
-                });
-            }
-
-            // Validate data types
-            Object.entries(record).forEach(([key, value]) => {
-                if (value && columnDataTypes[key]) {
-                    const type = columnDataTypes[key];
-                    const isValid = validateDataType(value, type);
-                    if (!isValid) {
-                        errors.push(`Invalid data type for "${key}": expected ${type}, got "${value}"`);
-                        dataTypeErrors++;
-                    }
-                }
-            });
-
-            if (errors.length > 0) {
-                recordErrors.push({ row: index + 2, errors });
-            }
-        });
-
-        const totalErrors = requiredFieldsErrors + dataTypeErrors + otherErrors;
-
-        // Prevent import if any required fields are missing
-        if (requiredFieldsErrors > 0) {
-            toast({
-                title: "Cannot import with missing required fields",
-                description: `${requiredFieldsErrors} required field errors found. Please fix them before importing.`,
-                variant: "destructive"
-            });
-
-            // Log detailed errors for debugging
-            console.error('Import validation errors:', recordErrors);
-            return;
-        }
-
-        // Warn about data type errors but allow import to proceed
-        if (dataTypeErrors > 0) {
-            const shouldProceed = window.confirm(
-                `${dataTypeErrors} data type errors found. These may cause issues with the imported data. Do you want to proceed anyway?`
-            );
-
-            if (!shouldProceed) {
-                return;
-            }
-        }
-
-        setIsImporting(true);
-        setImportProgress(0);
 
         try {
-            // First pass: Validate the data and collect all reference IDs
-            const referenceIds = new Set<string>();
-            const validationErrors: string[] = [];
+            setIsProcessingFile(true)
+            const reader = new FileReader()
 
-            csvRecords.forEach((record, index) => {
-                // Store reference IDs
-                if (record.referenceId) {
-                    if (referenceIds.has(record.referenceId)) {
-                        validationErrors.push(`Duplicate referenceId '${record.referenceId}' at row ${index + 2}`);
-                        otherErrors++;
-                    } else {
-                        referenceIds.add(record.referenceId);
-                    }
-                } else {
-                    validationErrors.push(`Missing referenceId at row ${index + 2}`);
-                    requiredFieldsErrors++;
+            reader.onload = (e) => {
+                const content = e.target?.result as string
+                const records = parseCSVData(content)
+
+                if (records.length === 0) {
+                    toast({
+                        title: "No valid records found",
+                        description: "The CSV file does not contain any valid records",
+                        variant: "destructive"
+                    })
+                    return
                 }
-            });
 
-            // Second pass: Validate relationToIds exist
-            csvRecords.forEach((record, index) => {
-                if (record.relationToId && !referenceIds.has(record.relationToId)) {
-                    validationErrors.push(`Invalid relationToId '${record.relationToId}' at row ${index + 2} - referenced ID not found`);
-                    otherErrors++;
+                // Validate records
+                const validRecords = records.filter(record => {
+                    return validateCsvData(record)
+                })
+
+                if (validRecords.length === 0) {
+                    toast({
+                        title: "Validation failed",
+                        description: "No valid records found after validation",
+                        variant: "destructive"
+                    })
+                    return
                 }
-            });
 
-            // If validation errors exist, show them and abort
-            if (validationErrors.length > 0) {
-                const errorMsg = validationErrors.length > 3
-                    ? `${validationErrors.slice(0, 3).join('\n')}\n... and ${validationErrors.length - 3} more errors`
-                    : validationErrors.join('\n');
-
-                toast({
-                    title: `${validationErrors.length} validation errors`,
-                    description: errorMsg,
-                    variant: "destructive"
-                });
-
-                setIsImporting(false);
-                return;
+                setImportData(validRecords)
+                setImportStep(2)
             }
 
-            // Third pass: Build hierarchical data structure
-            const clientsMap = new Map();
-            const beneficiariesMap = new Map();
+            reader.onerror = () => {
+                toast({
+                    title: "Error reading file",
+                    description: "There was an error reading the CSV file",
+                    variant: "destructive"
+                })
+            }
 
-            // Process in order: clients, beneficiaries, dependants
-            // First, create all clients
-            csvRecords.filter(r => r.recordType === 'CLIENT').forEach(record => {
-                clientsMap.set(record.referenceId, {
-                    id: record.clientId || generateId(),
-                    name: record.name,
-                    email: record.email || '',
-                    phone: record.phone || '',
-                    status: record.status || 'ACTIVE',
-                    joinDate: record.joinDate || new Date().toISOString().split('T')[0],
-                    lastActive: record.lastActive || new Date().toISOString().split('T')[0],
-                    clientType: record.clientType || 'INDIVIDUAL',
-                    counsellor: record.counsellor || '',
-                    notes: record.notes || '',
-                    beneficiaries: [],
-                    dependants: [],
-                    avatar: '',
-                    appointments: 0,
-                    messages: 0,
-                    resources: 0
-                });
-            });
+            reader.readAsText(csvFile)
+        } catch (error) {
+            toast({
+                title: "Import failed",
+                description: "There was an error processing the file",
+                variant: "destructive"
+            })
+        } finally {
+            setIsProcessingFile(false)
+        }
+    }
 
-            // Next, create and link beneficiaries
-            csvRecords.filter(r => r.recordType === 'BENEFICIARY').forEach(record => {
-                const clientRef = record.clientId;
-                const client = clientsMap.get(clientRef);
+    const validateCsvData = (record: ImportRecord): boolean => {
+        // Required fields
+        if (!record.name || !record.clientType) {
+            return false
+        }
 
-                if (client && client.clientType === 'COMPANY') {
-                    const beneficiary = {
+        // Email format
+        if (record.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
+            return false
+        }
+
+        // Phone format
+        if (record.phone && !/^\+?[\d\s-]{10,}$/.test(record.phone)) {
+            return false
+        }
+
+        // Date formats
+        if (record.joinDate && !isValidDate(record.joinDate)) {
+            return false
+        }
+        if (record.lastActive && !isValidDate(record.lastActive)) {
+            return false
+        }
+
+        // Client type validation
+        if (!['COMPANY', 'INDIVIDUAL'].includes(record.clientType)) {
+            return false
+        }
+
+        // Status validation
+        if (record.status && !['ACTIVE', 'INACTIVE'].includes(record.status)) {
+            return false
+        }
+
+        return true
+    }
+
+    const isValidDate = (dateString: string): boolean => {
+        const date = new Date(dateString)
+        return date instanceof Date && !isNaN(date.getTime())
+    }
+
+    const handleConfirmImport = async () => {
+        if (!importData) return
+
+        try {
+            const newClients = importData
+                .filter(record => record.recordType === 'CLIENT')
+                .map(record => {
+                    const client: Client = {
                         id: generateId(),
                         name: record.name,
                         email: record.email || '',
-                        department: record.department || '',
-                        role: record.role || '',
-                        status: record.status || 'ACTIVE',
-                        dependants: []
-                    };
-
-                    beneficiariesMap.set(record.referenceId, beneficiary);
-                    client.beneficiaries.push(beneficiary);
-                }
-            });
-
-            // Finally, process dependants
-            csvRecords.filter(r => r.recordType === 'DEPENDANT').forEach(record => {
-                const dependant = {
-                    id: generateId(),
-                    name: record.name,
-                    relation: record.relation || '',
-                    status: record.status || 'ACTIVE'
-                };
-
-                // Find where this dependant belongs - to a client or beneficiary
-                const client = clientsMap.get(record.clientId);
-
-                if (!client) return;
-
-                if (client.clientType === 'INDIVIDUAL' && record.relationToId === record.clientId) {
-                    // This is a dependant of an individual client
-                    client.dependants.push(dependant);
-                } else {
-                    // This might be a dependant of a beneficiary
-                    const beneficiary = beneficiariesMap.get(record.relationToId);
-                    if (beneficiary) {
-                        beneficiary.dependants.push(dependant);
+                        phone: record.phone || '',
+                        status: (record.status as ClientStatus) || 'PENDING',
+                        joinDate: record.joinDate || new Date().toISOString(),
+                        lastActive: record.lastActive || new Date().toISOString(),
+                        clientType: (record.clientType as ClientType) || 'INDIVIDUAL',
+                        counsellor: record.counsellor || null,
+                        avatar: null,
+                        appointments: 0,
+                        resources: 0,
+                        isDeleted: false,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        company: null,
+                        sessions: [],
+                        documents: [],
+                        notes: [],
+                        messages: []
                     }
-                }
-            });
+                    return client
+                })
 
-            // Convert to array of clients to import
-            const clientsToImport = Array.from(clientsMap.values());
+            setClients(prevClients => [...prevClients, ...newClients])
+            resetImport()
 
-            // Simulate API call with progress
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += 5;
-                setImportProgress(Math.min(progress, 95)); // Cap at 95% until completion
-
-                if (progress >= 95) {
-                    clearInterval(progressInterval);
-                }
-            }, 200);
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            console.log('Clients to import:', clientsToImport);
-
-            // In a real app, you would send clientsToImport to your API
-            // For now, we'll just simulate success
-
-            setImportProgress(100);
-            clearInterval(progressInterval);
-
-            setImportComplete(true);
-            setImportResults({
-                total: clientsToImport.length +
-                    clientsToImport.reduce((sum, c) => sum + c.beneficiaries.length, 0) +
-                    clientsToImport.reduce((sum, c) => {
-                        const individualDeps = c.dependants.length;
-                        const beneficiaryDeps = c.beneficiaries.reduce((s: number, b: any) => s + b.dependants.length, 0);
-                        return sum + individualDeps + beneficiaryDeps;
-                    }, 0),
-                success: clientsToImport.length +
-                    clientsToImport.reduce((sum, c) => sum + c.beneficiaries.length, 0) +
-                    clientsToImport.reduce((sum, c) => {
-                        const individualDeps = c.dependants.length;
-                        const beneficiaryDeps = c.beneficiaries.reduce((s: number, b: any) => s + b.dependants.length, 0);
-                        return sum + individualDeps + beneficiaryDeps;
-                    }, 0),
-                errors: 0
-            });
-
+            toast({
+                title: "Import successful",
+                description: `Imported ${newClients.length} clients`,
+            })
         } catch (error) {
-            console.error('Error importing clients:', error);
+            console.error('Error importing clients:', error)
             toast({
                 title: "Import failed",
-                description: "An unexpected error occurred during import",
+                description: "Failed to import clients",
                 variant: "destructive"
-            });
-            setImportProgress(0);
+            })
         }
-
-        setIsImporting(false);
     }
 
     // Helper to generate IDs
@@ -994,6 +811,86 @@ DEPENDANT,C002,DP002,Lucy Solo,,,ACTIVE,,,,,,CL002,Daughter,,`;
             fileInputRef.current.value = '';
         }
     };
+
+    // Fetch clients
+    const fetchClients = async () => {
+        try {
+            setIsLoading(true)
+            const params = new URLSearchParams({
+                page: currentPage.toString(),
+                limit: itemsPerPage.toString(),
+                search: searchQuery,
+                status: statusFilter,
+                clientType: clientTypeFilter,
+            })
+
+            const response = await fetch(`/api/clients?${params}`)
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to fetch clients')
+            }
+
+            setClients(data.clients)
+            setTotalClients(data.total)
+            setTotalPages(data.totalPages)
+        } catch (error) {
+            console.error('Error fetching clients:', error)
+            toast({
+                title: 'Error',
+                description: 'Failed to fetch clients',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    // Fetch clients when filters or pagination changes
+    useEffect(() => {
+        fetchClients()
+    }, [currentPage, itemsPerPage, searchQuery, statusFilter, clientTypeFilter])
+
+    const handleStatusFilterChange = (value: FilterStatus) => {
+        setStatusFilter(value)
+    }
+
+    const handleClientTypeFilterChange = (value: FilterClientType) => {
+        setClientTypeFilter(value)
+    }
+
+    const getClientInfo = (client: Client) => {
+        return {
+            name: client.name,
+            email: client.email,
+            phone: client.phone || '',
+            status: client.status,
+            joinDate: client.joinDate,
+            lastActive: client.lastActive,
+            clientType: client.clientType,
+            counsellor: client.counsellor || '',
+            appointments: client.appointments,
+            resources: client.resources
+        }
+    }
+
+    const renderClientRow = (client: Client) => {
+        const clientInfo = getClientInfo(client)
+        return (
+            <TableRow key={client.id}>
+                <TableCell>
+                    <Checkbox
+                        checked={selectedClients.includes(client.id)}
+                        onCheckedChange={() => toggleClientSelection(client.id)}
+                    />
+                </TableCell>
+                <TableCell>{clientInfo.name}</TableCell>
+                <TableCell>{clientInfo.email}</TableCell>
+                <TableCell>{clientInfo.phone}</TableCell>
+                {/* ... rest of the row ... */}
+            </TableRow>
+        )
+    }
 
     if (!user) {
         return null
@@ -2098,7 +1995,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                 />
                             </div>
                             <div className="flex items-center gap-2">
-                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                                     <SelectTrigger className="w-[130px] h-9">
                                         <SelectValue placeholder="All Statuses" />
                                     </SelectTrigger>
@@ -2110,7 +2007,7 @@ CLIENT,C001,CL001,ACME Corp,hr@acme.com,0700123456,ACTIVE,2023-01-10,2024-04-01,
                                     </SelectContent>
                                 </Select>
 
-                                <Select value={clientTypeFilter} onValueChange={setClientTypeFilter}>
+                                <Select value={clientTypeFilter} onValueChange={handleClientTypeFilterChange}>
                                     <SelectTrigger className="w-[130px] h-9">
                                         <SelectValue placeholder="All Types" />
                                     </SelectTrigger>

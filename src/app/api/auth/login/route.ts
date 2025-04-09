@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { comparePasswords, generateToken, createAuditLog } from '@/lib/server-auth'
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
-import { UserStatus } from '@/lib/db/schema'
 
 // Login schema
 const loginSchema = z.object({
@@ -26,13 +25,7 @@ export async function POST(request: NextRequest) {
         // Find user
         console.log('Finding user with email:', loginData.email)
         const user = await prisma.user.findUnique({
-            where: { email: loginData.email },
-            include: {
-                clientProfile: true,
-                counsellorProfile: true,
-                adminProfile: true,
-                orgContactProfile: true,
-            },
+            where: { email: loginData.email }
         })
         console.log('User found:', user ? 'Yes' : 'No')
 
@@ -57,12 +50,12 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Check if user is active
-        console.log('Checking user status:', user.status)
-        if (user.status !== UserStatus.ACTIVE) {
-            console.log('User not active, returning 403')
+        // Check if user is deleted
+        console.log('Checking if user is deleted:', user.isDeleted)
+        if (user.isDeleted) {
+            console.log('User is deleted, returning 403')
             return NextResponse.json(
-                { error: 'Your account is not active. Please contact support.' },
+                { error: 'Your account has been deleted. Please contact support.' },
                 { status: 403 }
             )
         }
@@ -87,10 +80,9 @@ export async function POST(request: NextRequest) {
                 user: {
                     id: user.id,
                     email: user.email,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
+                    name: user.name,
                     role: user.role,
-                    profile: user.clientProfile || user.counsellorProfile || user.adminProfile || user.orgContactProfile,
+                    avatar: user.avatar
                 }
             },
             { status: 200 }

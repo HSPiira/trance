@@ -82,10 +82,13 @@ export async function getUserFromRequest(req: NextRequest): Promise<User | null>
     const user = await prisma.user.findUnique({
         where: { id: decoded.id as string },
         include: {
-            clientProfile: true,
-            counsellorProfile: true,
-            adminProfile: true,
-        },
+            documents: true,
+            messages: true,
+            notes: true,
+            resources: true,
+            sessions: true,
+            auditLogs: true
+        }
     })
 
     return user
@@ -108,23 +111,27 @@ export async function getCurrentUser() {
     const user = await prisma.user.findUnique({
         where: { id: decoded.id as string },
         include: {
-            clientProfile: true,
-            counsellorProfile: true,
-            adminProfile: true,
-        },
+            documents: true,
+            messages: true,
+            notes: true,
+            resources: true,
+            sessions: true,
+            auditLogs: true
+        }
     })
 
     return user
 }
 
 // Create an audit log entry
-export async function createAuditLog(userId: string, action: string) {
+export async function createAuditLog(userId: string, action: string, details?: any) {
     return prisma.auditLog.create({
         data: {
-            action,
+            userId: userId,
+            action: action,
             entityType: 'USER',
             entityId: userId,
-            createdById: userId,
+            details: details || null,
         },
     })
-} 
+}

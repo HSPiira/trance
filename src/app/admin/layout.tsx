@@ -47,7 +47,7 @@ export default function AdminLayout({
 }) {
     const router = useRouter()
     const pathname = usePathname()
-    const { user, signOut } = useAuth()
+    const { user, logout } = useAuth()
     const { theme, setTheme } = useTheme()
     const [isSidebarOpen, setIsSidebarOpen] = useState(true)
     const [isLoading, setIsLoading] = useState(true)
@@ -216,12 +216,11 @@ export default function AdminLayout({
                                 <Button variant="ghost" className="gap-2">
                                     <Avatar className="h-8 w-8">
                                         <AvatarFallback>
-                                            {user.firstName.charAt(0)}
-                                            {user.lastName.charAt(0)}
+                                            {(user as any).name.split(' ').map((n: string) => n[0]).join('')}
                                         </AvatarFallback>
                                     </Avatar>
                                     <span className="hidden md:inline">
-                                        {user.firstName} {user.lastName}
+                                        {(user as any).name}
                                     </span>
                                     <ChevronDown className="h-4 w-4" />
                                 </Button>
@@ -238,7 +237,7 @@ export default function AdminLayout({
                                     Settings
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => signOut()}>
+                                <DropdownMenuItem onClick={() => logout()}>
                                     <LogOut className="mr-2 h-4 w-4" />
                                     Sign out
                                 </DropdownMenuItem>

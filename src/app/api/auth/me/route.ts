@@ -16,16 +16,16 @@ export async function GET() {
             user: {
                 id: user.id,
                 email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
+                name: user.name,
                 role: user.role,
-                profile: user.clientProfile || user.counsellorProfile || user.adminProfile,
-            },
+                avatar: user.avatar,
+                isDeleted: user.isDeleted
+            }
         })
     } catch (error) {
-        console.error('Get current user error:', error)
+        console.error('Error in /api/auth/me:', error)
         return NextResponse.json(
-            { error: 'Failed to get user' },
+            { error: 'Internal server error' },
             { status: 500 }
         )
     }
