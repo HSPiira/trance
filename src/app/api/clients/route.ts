@@ -54,6 +54,17 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
 
+        // Validate required fields
+        const requiredFields = ['name', 'email', 'clientType'];
+        for (const field of requiredFields) {
+            if (!body[field]) {
+                return NextResponse.json(
+                    { error: `Missing required field: ${field}` },
+                    { status: 400 }
+                );
+            }
+        }
+
         const client = await prisma.client.create({
             data: {
                 name: body.name,
@@ -76,4 +87,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-} 
+}
