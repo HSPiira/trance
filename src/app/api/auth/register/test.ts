@@ -16,7 +16,8 @@ async function testRegistration() {
         };
 
         console.log('Test case 1: Valid registration');
-        console.log('Request data:', JSON.stringify(validData, null, 2));
+        // Log data without sensitive information
+        console.log('Request data:', JSON.stringify({ ...validData, password: '***REDACTED***' }, null, 2));
 
         const response = await fetch('http://localhost:3000/api/auth/register', {
             method: 'POST',
@@ -29,6 +30,13 @@ async function testRegistration() {
         const result = await response.json();
         console.log('Response status:', response.status);
         console.log('Response data:', JSON.stringify(result, null, 2));
+        
+        // Add assertions
+        if (response.status !== 201 && response.status !== 200) {
+            console.error('❌ Test case 1 failed: Expected status 201 or 200, got', response.status);
+        } else {
+            console.log('✅ Test case 1 passed!');
+        }
 
         // Test case 2: Missing name field
         const invalidData = {
@@ -38,7 +46,7 @@ async function testRegistration() {
         };
 
         console.log('\nTest case 2: Missing name field');
-        console.log('Request data:', JSON.stringify(invalidData, null, 2));
+        console.log('Request data:', JSON.stringify({ ...invalidData, password: '***REDACTED***' }, null, 2));
 
         const response2 = await fetch('http://localhost:3000/api/auth/register', {
             method: 'POST',
@@ -51,9 +59,17 @@ async function testRegistration() {
         const result2 = await response2.json();
         console.log('Response status:', response2.status);
         console.log('Response data:', JSON.stringify(result2, null, 2));
-
+        
+        // Add assertions for invalid test case
+        if (response2.status !== 400) {
+            console.error('❌ Test case 2 failed: Expected status 400, got', response2.status);
+        } else {
+            console.log('✅ Test case 2 passed!');
+        }
+ 
     } catch (error) {
-        console.error('Error testing registration:', error);
+        console.error('Error testing registration:', error instanceof Error ? error.message : error);
+        process.exit(1);
     }
 }
 
