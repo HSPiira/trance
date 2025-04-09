@@ -73,15 +73,6 @@ export async function GET(request: NextRequest) {
     }
 }
 
-        return NextResponse.json(clients);
-    } catch (error) {
-        console.error('Error fetching clients:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch clients' },
-            { status: 500 }
-        );
-    }
-}
 
 // POST /api/clients - Create a new client
 export async function POST(request: NextRequest) {
