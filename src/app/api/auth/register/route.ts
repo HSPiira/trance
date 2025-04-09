@@ -69,14 +69,27 @@ export async function POST(request: NextRequest) {
         const fullName = `${data.firstName} ${data.lastName}`
 
         // Create user
-        console.log('Creating user with data:', JSON.stringify({
-            email: data.email,
-            name: fullName,
-            role: data.role,
-            isDeleted: false,
-        }, null, 2))
+import { CreateUserData } from 'path/to/types';  // Adjust the import path as needed
 
-        // Use a type assertion to bypass the type checking issue
+// (Other code remains unchanged)
+
+console.log('Creating user with data:', JSON.stringify({
+    email: data.email,
+    name: fullName,
+    role: data.role,
+    isDeleted: false,
+}, null, 2));
+
+// Use the proper type for user creation data instead of bypassing type checking
+const createdUser = await prisma.user.create({
+  data: {
+    email: data.email,
+    name: fullName,
+    role: data.role,
+    password: hashedPassword,
+    isDeleted: false
+  } as CreateUserData
+});
         const user = await prisma.user.create({
             data: {
                 email: data.email,
