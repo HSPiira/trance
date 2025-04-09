@@ -5,7 +5,7 @@
 
 // Client types
 export type ClientType = 'COMPANY' | 'INDIVIDUAL';
-export type ClientStatus = 'ACTIVE' | 'INACTIVE';
+export type ClientStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED' | 'TERMINATED' | 'ARCHIVED' | 'DELETED' | 'BLOCKED' | 'ON_HOLD';
 
 // Base client model
 export interface Client {
@@ -18,11 +18,14 @@ export interface Client {
     lastActive: string;
     clientType: ClientType;
     counsellor?: string;
-    notes?: string;
     avatar?: string;
     appointments: number;
-    messages: number;
     resources: number;
+    isDeleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+    notes?: string;
+    messages?: number;
     beneficiaries?: Beneficiary[];
     dependants?: Dependant[];
 }

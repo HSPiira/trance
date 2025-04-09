@@ -101,7 +101,8 @@ import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 
 // Import mock data
-import { Client, clients } from './mock-data'
+import { Client } from '@/types/schema'
+import { clients } from './mock-data'
 
 // Client type icon
 const getClientTypeIcon = (clientType: string) => {
@@ -232,72 +233,76 @@ export default function AdminClientsPage() {
         }
     })
 
+    // Define the missing dialog state
+    const [showAssignDialog, setShowAssignDialog] = useState(false)
+
     useEffect(() => {
         if (!user || user.role !== 'ADMIN') {
             router.push('/unauthorized')
         }
     }, [router, user])
 
+    // Add helper function for case-insensitive filter comparison
+    const normalizeFilterValue = (value: string) => value.toUpperCase();
+
     // Filter and search functionality
     const filteredClients = useMemo(() => {
         return clients.filter(client => {
-            // Quick filter
+            // Apply search filter
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                const matchesSearch = (
+                    client.name.toLowerCase().includes(query) ||
+                    client.email.toLowerCase().includes(query) ||
+                    client.phone.toLowerCase().includes(query) ||
+                    client.clientType.toLowerCase().includes(query) ||
+                    client.status.toLowerCase().includes(query)
+                );
+                if (!matchesSearch) return false;
+            }
+
+            // Apply quick filters
             if (filter !== 'ALL') {
                 switch (filter) {
-                    case 'COMPANY':
-                        if (client.clientType !== 'COMPANY') return false
-                        break
-                    case 'INDIVIDUAL':
-                        if (client.clientType !== 'INDIVIDUAL') return false
-                        break
+                    case 'COMPANIES':
+                        if (normalizeFilterValue(client.clientType) !== 'COMPANY') return false;
+                        break;
+                    case 'INDIVIDUALS':
+                        if (normalizeFilterValue(client.clientType) !== 'INDIVIDUAL') return false;
+                        break;
                     case 'ACTIVE':
-                        if (client.status !== 'ACTIVE') return false
-                        break
+                        if (normalizeFilterValue(client.status) !== 'ACTIVE') return false;
+                        break;
                     case 'INACTIVE':
-                        if (client.status !== 'INACTIVE') return false
-                        break
+                        if (normalizeFilterValue(client.status) !== 'INACTIVE') return false;
+                        break;
                     case 'RECENT':
-                        const lastActive = new Date(client.lastActive)
-                        const thirtyDaysAgo = new Date()
-                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-                        if (lastActive < thirtyDaysAgo) return false
-                        break
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        if (new Date(client.lastActive) < thirtyDaysAgo) return false;
+                        break;
                 }
             }
 
-            // Advanced filters
-            if (advancedFilters.status && client.status !== advancedFilters.status) {
-                return false
+            // Apply advanced filters
+            if (advancedFilters.status && advancedFilters.status !== 'all') {
+                if (normalizeFilterValue(client.status) !== normalizeFilterValue(advancedFilters.status)) return false;
             }
-            if (advancedFilters.clientType && client.clientType !== advancedFilters.clientType) {
-                return false
+            if (advancedFilters.clientType && advancedFilters.clientType !== 'all') {
+                if (normalizeFilterValue(client.clientType) !== normalizeFilterValue(advancedFilters.clientType)) return false;
             }
-            if (advancedFilters.dateRange.from || advancedFilters.dateRange.to) {
-                const joinDate = new Date(client.joinDate)
-                const fromDate = advancedFilters.dateRange.from ? new Date(advancedFilters.dateRange.from) : null
-                const toDate = advancedFilters.dateRange.to ? new Date(advancedFilters.dateRange.to) : null
-
-                if (fromDate && joinDate < fromDate) return false
-                if (toDate && joinDate > toDate) return false
+            if (advancedFilters.dateRange.from) {
+                const fromDate = new Date(advancedFilters.dateRange.from);
+                if (new Date(client.joinDate) < fromDate) return false;
             }
-
-            // Search query
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase()
-                const searchableFields = [
-                    client.name,
-                    client.email,
-                    client.phone,
-                    client.status,
-                    client.clientType
-                ].map(field => (field || '').toLowerCase())
-
-                return searchableFields.some(field => field.includes(query))
+            if (advancedFilters.dateRange.to) {
+                const toDate = new Date(advancedFilters.dateRange.to);
+                if (new Date(client.joinDate) > toDate) return false;
             }
 
-            return true
-        })
-    }, [clients, filter, searchQuery, advancedFilters])
+            return true;
+        });
+    }, [clients, filter, searchQuery, advancedFilters]);
 
     // Pagination
     const paginatedClients = useMemo(() => {
@@ -388,21 +393,7 @@ export default function AdminClientsPage() {
 
                 case 'assign':
                     // Open assign dialog
-// ... other imports
-import { useState } from 'react'
-
-function ClientsPage() {
-  // Define the missing dialog state
-  const [showAssignDialog, setShowAssignDialog] = useState(false)
-
-  // ... other code
-
                     setShowAssignDialog(true)
-
-  // ... rest of the component
-}
-
-export default ClientsPage
                     break
 
                 case 'delete':

@@ -9,10 +9,11 @@ import { CalendarDays, Mail, Phone, Building2, User, Clock, MessageSquare, FileT
 import Link from "next/link"
 import ClientDetail from './client-detail'
 import { clients } from '../mock-data'
+import { Client } from '@/types/schema'
 
 export default function ClientPage({ params }: { params: { id: string } }) {
     // Find the client with the corresponding ID
-    const client = clients.find(c => c.id === params.id)
+    const client: Client = clients.find(c => c.id === params.id) as Client
 
     // If client not found, return 404
     if (!client) {
