@@ -28,6 +28,21 @@ export async function GET(request: NextRequest) {
             ];
         }
 
+export async function GET(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const clientType = searchParams.get('clientType');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '20', 10);
+        const skip = (page - 1) * limit;
+
+        // Build filter conditions
+        const where: Record<string, unknown> = {};
+
+        // ... existing filter logic ...
+
         const clients = await prisma.client.findMany({
             where,
             include: {
@@ -37,7 +52,26 @@ export async function GET(request: NextRequest) {
             orderBy: {
                 lastActive: 'desc',
             },
+            skip,
+            take: limit,
         });
+
+        // Get total count for pagination metadata
+        const total = await prisma.client.count({ where });
+
+        return NextResponse.json({
+            clients,
+            pagination: {
+                total,
+                page,
+                limit,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        // ... existing error handling ...
+    }
+}
 
         return NextResponse.json(clients);
     } catch (error) {
