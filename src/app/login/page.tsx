@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { BackButton } from '@/components/ui/back-button'
 import { Inter } from 'next/font/google'
 import { useTheme } from 'next-themes'
+import { useAuth } from '@/lib/auth'
 
 const inter = Inter({
     subsets: ['latin'],
@@ -25,6 +26,7 @@ export default function LoginPage() {
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const { theme, setTheme } = useTheme()
+    const { setUser } = useAuth()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -53,7 +55,10 @@ export default function LoginPage() {
                 throw new Error(data.error || 'Failed to login')
             }
 
-            router.push(data.redirectUrl)
+            setUser(data.user)
+
+            const role = data.user.role.toLowerCase()
+            router.push(`/${role}/dashboard`)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred during login')
         } finally {
