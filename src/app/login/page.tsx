@@ -57,7 +57,8 @@ export default function LoginPage() {
 
             setUser(data.user)
 
-            const role = data.user.role.toLowerCase()
+            // Handle potential missing role property
+            const role = data.user?.role ? data.user.role.toLowerCase() : 'client'
             router.push(`/${role}/dashboard`)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred during login')
