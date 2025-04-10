@@ -14,7 +14,7 @@ export function DashboardLink() {
     }
 
     const handleClick = () => {
-        const role = user.role.toLowerCase()
+        const role = user?.role ? user.role.toLowerCase() : 'client'
         router.push(`/${role}/dashboard`)
     }
 
