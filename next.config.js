@@ -27,12 +27,19 @@ const nextConfig = {
                         key: 'Content-Security-Policy',
                         value: [
                             "default-src 'self'",
-                            "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' 'inline-speculation-rules' chrome-extension://e373f487-540f-42b8-9f3c-a3d6c6ec0fc1/",
-                            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+                            process.env.NODE_ENV === 'development'
+                                ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' chrome-extension://e373f487-540f-42b8-9f3c-a3d6c6ec0fc1/"
+                                : "script-src 'self'",
+                            process.env.NODE_ENV === 'development'
+                                ? "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
+                                : "style-src 'self' https://fonts.googleapis.com",
                             "font-src 'self' https://fonts.gstatic.com",
                             "img-src 'self' data: blob:",
                             "connect-src 'self'",
                             "frame-src 'self'",
+                            "form-action 'self'",
+                            "base-uri 'self'",
+                            "object-src 'none'"
                         ].join('; ')
                     }
                 ]
