@@ -15,4 +15,14 @@ redis.on('connect', () => {
   console.log('Redis connected successfully');
 });
 
+/**
+ * Closes the Redis connection gracefully.
+ * Call this method when the application is shutting down.
+ */
+export const closeRedisConnection = async (): Promise<void> => {
+  console.log('Closing Redis connection...');
+  await redis.quit();
+  console.log('Redis connection closed');
+};
+
 export { redis };
