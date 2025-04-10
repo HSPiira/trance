@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ClientStatus, ClientType } from '@prisma/client';
 
 // GET /api/clients - Get all clients
 export async function GET(request: NextRequest) {
@@ -18,50 +18,52 @@ export async function GET(request: NextRequest) {
             AND: [
                 search ? {
                     OR: [
-                        { name: { contains: search, mode: 'insensitive' } },
-                        { email: { contains: search, mode: 'insensitive' } },
+                        { name: { contains: search, mode: 'insensitive' as const } },
+                        { email: { contains: search, mode: 'insensitive' as const } },
                     ],
                 } : {},
-                status && status !== 'ALL' ? { status } : {},
-                clientType && clientType !== 'ALL' ? { clientType } : {},
-            ],
+                status && status !== 'ALL' ? { status: status as ClientStatus } : {},
+                clientType && clientType !== 'ALL' ? { clientType: clientType as ClientType } : {},
+            ].filter(condition => Object.keys(condition).length > 0),
         };
 
-        const [clients, total] = await Promise.all([
-            prisma.client.findMany({
-                where,
-                skip,
-                take: limit,
-                include: {
-                    beneficiaries: {
-                        include: {
-                            dependants: true,
-                        },
+        try {
+            const [clients, total] = await Promise.all([
+                prisma.client.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    include: {
+                        company: true,
+                        documents: true,
+                        messages: true,
+                        notes: true,
+                        sessions: true,
                     },
-                    dependants: true,
-                    sessions: true,
-                    documents: true,
-                    notes: true,
-                    messages: true,
-                    company: true,
-                },
-                orderBy: {
-                    createdAt: 'desc',
-                },
-            }),
-            prisma.client.count({ where }),
-        ]);
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                }),
+                prisma.client.count({ where }),
+            ]);
 
-        return NextResponse.json({
-            clients,
-            total,
-            page,
-            totalPages: Math.ceil(total / limit),
-        });
+            return NextResponse.json({
+                clients,
+                total,
+                page,
+                totalPages: Math.ceil(total / limit),
+            });
+        } catch (dbError) {
+            console.error('Database error:', dbError);
+            return NextResponse.json(
+                { error: 'Database error occurred while fetching clients' },
+                { status: 500 }
+            );
+        }
     } catch (error) {
-        console.error('Error fetching clients:', error);
+        console.error('Error in client route:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch clients' },
+            { error: 'Internal server error while processing request' },
             { status: 500 }
         );
     }
@@ -74,8 +76,7 @@ export async function POST(request: NextRequest) {
         const client = await prisma.client.create({
             data,
             include: {
-                beneficiaries: true,
-                dependants: true,
+                company: true,
             },
         });
         return NextResponse.json(client);
@@ -95,8 +96,7 @@ export async function PUT(request: NextRequest) {
             where: { id },
             data,
             include: {
-                beneficiaries: true,
-                dependants: true,
+                company: true,
             },
         });
         return NextResponse.json(client);

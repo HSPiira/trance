@@ -58,7 +58,8 @@ export async function POST(request: NextRequest) {
             email: data.email,
             password: hashedPassword,
             role: data.role,
-            name: `${data.firstName} ${data.lastName}`
+            name: `${data.firstName} ${data.lastName}`,
+            isDeleted: false // Ensure required field is included
         }
 
         // Create user

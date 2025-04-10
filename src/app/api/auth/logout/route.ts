@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser, createAuditLog } from '@/lib/auth'
+import { getCurrentUser, createAuditLog } from '@/lib/server-auth'
 
 export async function POST(request: NextRequest) {
     try {
@@ -8,7 +8,12 @@ export async function POST(request: NextRequest) {
 
         if (user) {
             // Create audit log
-            await createAuditLog(user.id, 'LOGOUT')
+            try {
+                await createAuditLog(user.id, 'LOGOUT')
+            } catch (error) {
+                console.error('Failed to create audit log:', error)
+                // Continue with logout even if audit log fails
+            }
         }
 
         // Clear token cookie

@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  name         String
+  email        String
+  phone        String
+  status       ClientStatus
+  joinDate     DateTime
+  lastActive   DateTime
+  clientType   ClientType
+  counsellor   String?
+  avatar       String?
+  appointments Int          @default(0)
+  resources    Int          @default(0)
+  id           String       @id @default(uuid())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  company      Company?
+  documents    Document[]
+  messages     Message[]
+  notes        Note[]
+  sessions     Session[]
+}
+
+model Person {
+  fullName    String
+  dateOfBirth DateTime
+  gender      String
+  nationalId  String?         @unique
+  email       String?
+  phone       String?
+  address     String?
+  id          String          @id @default(uuid())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  asDependant Dependant?
+  asEmployee  Employee?
+  services    PersonService[]
+}
+
+model Company {
+  registrationNumber String     @unique
+  industry           String?
+  size               Int?
+  website            String?
+  clientId           String     @unique
+  id                 String     @id @default(uuid())
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  client             Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  employees          Employee[]
+}
+
+model Employee {
+  employeeNumber String         @unique
+  jobTitle       String?
+  department     String?
+  hireDate       DateTime
+  status         EmployeeStatus @default(ACTIVE)
+  personId       String         @unique
+  companyId      String
+  id             String         @id @default(uuid())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  dependants     Dependant[]
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  person         Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+}
+
+model Dependant {
+  relationship        String
+  personId            String   @unique
+  employeeId          String
+  id                  String   @id @default(uuid())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  dependentOfEmployee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  person              Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+}
+
+model Service {
+  serviceName    String
+  description    String?
+  category       String?
+  isActive       Boolean         @default(true)
+  id             String          @id @default(uuid())
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  personServices PersonService[]
+}
+
+model PersonService {
+  dateReceived DateTime
+  notes        String?
+  personId     String
+  serviceId    String
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  person       Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  service      Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  name      String
+  email     String     @unique
+  password  String
+  role      UserRole
+  avatar    String?
+  id        String     @id @default(uuid())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  isDeleted Boolean    @default(false)
+  auditLogs AuditLog[]
+  documents Document[]
+  messages  Message[]
+  notes     Note[]
+  resources Resource[]
+  sessions  Session[]
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  date        DateTime
+  duration    Int
+  status      SessionStatus
+  notes       String?
+  type        SessionType
+  clientId    String
+  counselorId String
+  id          String        @id @default(uuid())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  counselor   User          @relation(fields: [counselorId], references: [id])
+}
+
+model Document {
+  title        String
+  type         DocumentType
+  url          String
+  size         Int
+  uploadedAt   DateTime     @default(now())
+  clientId     String
+  uploadedById String
+  id           String       @id @default(uuid())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+}
+
+model Note {
+  content   String
+  isPrivate Boolean  @default(false)
+  clientId  String
+  authorId  String
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  content     String
+  sentAt      DateTime  @default(now())
+  readAt      DateTime?
+  attachments String[]
+  clientId    String
+  senderId    String
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sender      User      @relation(fields: [senderId], references: [id])
+}
+
+model Resource {
+  title       String
+  description String
+  type        ResourceType
+  url         String
+  createdById String
+  id          String       @id @default(uuid())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  createdBy   User         @relation(fields: [createdById], references: [id])
+}
+
+model base_model {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@map("_base_model")
+}
+
+enum ClientType {
+  COMPANY
+  INDIVIDUAL
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum UserRole {
+  ADMIN
+  COUNSELOR
+  STAFF
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum SessionType {
+  INITIAL
+  FOLLOW_UP
+  EMERGENCY
+  GROUP
+}
+
+enum DocumentType {
+  CONSENT
+  ASSESSMENT
+  REPORT
+  OTHER
+}
+
+enum ResourceType {
+  ARTICLE
+  VIDEO
+  WORKSHOP
+  TOOL
+}
