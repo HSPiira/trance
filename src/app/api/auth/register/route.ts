@@ -1,27 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { hashPassword, generateToken, createAuditLog } from '@/lib/server-auth'
+import { hashPassword } from '@/lib/server-auth'
 import { prisma } from '@/lib/db/prisma'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
-import { Prisma, UserRole } from '@prisma/client'
+import { UserRole } from '@prisma/client'
 
 // Registration schema with strict validation
 const registerSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(8),
-    confirmPassword: z.string().optional(),
-    firstName: z.string().min(1),
-    lastName: z.string().min(1),
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string(),
+    firstName: z.string().min(1, 'First name is required'),
+    lastName: z.string().min(1, 'Last name is required'),
     phoneNumber: z.string().optional(),
-    role: z.nativeEnum(UserRole),
+    role: z.nativeEnum(UserRole, {
+        errorMap: () => ({ message: 'Invalid role selected' })
+    }),
     clientType: z.string().optional(),
-}).strict()
+}).strict().refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+});
 
 export async function POST(request: NextRequest) {
     try {
+        // Parse request body
         const body = await request.json()
-        const result = registerSchema.safeParse(body)
 
+        // Validate using zod schema
+        const result = registerSchema.safeParse(body)
         if (!result.success) {
+            console.log('Validation failed:', result.error)
             return NextResponse.json(
                 { error: 'Validation error', details: result.error.issues },
                 { status: 400 }
@@ -30,28 +39,22 @@ export async function POST(request: NextRequest) {
 
         const data = result.data
 
-        // Check if passwords match if confirmPassword is provided
-        if (data.confirmPassword && data.password !== data.confirmPassword) {
-            return NextResponse.json(
-                { error: 'Passwords do not match' },
-                { status: 400 }
-            )
-        }
-
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({
-            where: { email: data.email },
+            where: { email: data.email }
         })
 
         if (existingUser) {
+            console.log('User already exists:', data.email)
             return NextResponse.json(
-                { error: 'Email already registered' },
+                { error: 'User already exists' },
                 { status: 400 }
             )
         }
 
         // Hash password
         const hashedPassword = await hashPassword(data.password)
+        console.log('Password hashed successfully')
 
         // Create user data with proper typing
         const userData: Prisma.UserCreateInput = {
@@ -59,33 +62,32 @@ export async function POST(request: NextRequest) {
             password: hashedPassword,
             role: data.role,
             name: `${data.firstName} ${data.lastName}`,
-            isDeleted: false // Ensure required field is included
+            isDeleted: false
         }
 
-        // Create user
-        const user = await prisma.user.create({ data: userData })
+        // Use a transaction to ensure both operations succeed or fail together
+        await prisma.$transaction(async (tx) => {
+            // Create user
+            const user = await tx.user.create({ data: userData })
 
-        // Generate token
-        const token = await generateToken(user)
+            // Create audit log
+            await tx.auditLog.create({
+                data: {
+                    userId: user.id,
+                    action: 'REGISTER',
+                    entityType: 'USER',
+                    entityId: user.id,
+                    details: Prisma.JsonNull,
+                }
+            });
+        });
 
-        // Create audit log
-        await createAuditLog(user.id, 'REGISTER')
+        // Return success response without setting token cookie
+        return NextResponse.json({
+            message: 'Registration successful. Please log in to continue.',
+            redirectUrl: '/auth/login'
+        }, { status: 201 });
 
-        // Remove sensitive information
-        const { password: _, ...userWithoutPassword } = user
-
-        // Set cookie and return response
-        const response = NextResponse.json({ user: userWithoutPassword })
-        response.cookies.set({
-            name: 'token',
-            value: token,
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-        })
-
-        return response
     } catch (error) {
         console.error('Registration error:', error)
         if (error instanceof Error) {

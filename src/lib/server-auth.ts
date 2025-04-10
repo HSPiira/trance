@@ -125,19 +125,19 @@ export async function getCurrentUser() {
 
 // Create an audit log entry
 export async function createAuditLog(userId: string, action: string, details?: any) {
-    const data = {
-        userId,
-        action,
-        entityType: 'USER',
-        entityId: userId,
-        details: details || null,
-    };
-
-    // Using raw query to insert audit log
-    await prisma.$executeRaw`
-        INSERT INTO "AuditLog" ("userId", "action", "entityType", "entityId", "details", "createdAt")
-        VALUES (${userId}, ${action}, ${data.entityType}, ${data.entityId}, ${JSON.stringify(details)}, NOW())
-    `;
-
-    return true;
+    try {
+        await prisma.auditLog.create({
+            data: {
+                userId,
+                action,
+                entityType: 'USER',
+                entityId: userId,
+                details: details || null,
+            }
+        });
+        return true;
+    } catch (error) {
+        console.error('Failed to create audit log:', error);
+        return false;
+    }
 }
