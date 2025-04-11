@@ -39,6 +39,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useTheme } from 'next-themes'
+import { DashboardLink } from '@/components/ui/dashboard-link'
 
 export default function AdminLayout({
     children,
@@ -60,7 +61,14 @@ export default function AdminLayout({
     useEffect(() => {
         // Wait a bit for auth to initialize
         setIsLoading(false);
-    }, [user])
+
+        // Check if user has admin role
+        if (user && user.role !== 'ADMIN') {
+            // Redirect to the appropriate dashboard based on role
+            const role = user.role.toLowerCase();
+            router.push(`/${role}/dashboard`);
+        }
+    }, [user, router])
 
     // Show loading state
     if (isLoading) {
@@ -76,10 +84,15 @@ export default function AdminLayout({
         return null
     }
 
+    // If user is not admin, don't render admin layout
+    if (user.role !== 'ADMIN') {
+        return null;
+    }
+
     const unreadCount = notifications.filter(n => !n.read).length
 
     const navigation = [
-        { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+        { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, component: DashboardLink },
         { name: 'Clients', href: '/admin/clients', icon: UserCircle },
         { name: 'Counsellors', href: '/admin/counsellors', icon: HeartHandshake },
         { name: 'Sessions', href: '/admin/sessions', icon: MessageSquare },
@@ -117,6 +130,13 @@ export default function AdminLayout({
                 <nav className="space-y-1 p-2">
                     {navigation.map((item) => {
                         const isActive = pathname === item.href
+
+                        // If the item has a custom component, render it
+                        if (item.component) {
+                            return <item.component key={item.name} />
+                        }
+
+                        // Otherwise render the default button
                         return (
                             <Button
                                 key={item.name}

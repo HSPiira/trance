@@ -16,6 +16,8 @@ export const useAuth = create<AuthState>((set) => ({
         try {
             await fetch('/api/auth/logout', { method: 'POST' })
             set({ user: null })
+            // Redirect to login page after successful logout
+            window.location.href = '/login'
         } catch (error) {
             console.error('Logout error:', error)
         }
@@ -33,6 +35,20 @@ export async function checkAuth(): Promise<User | null> {
         return data.user
     } catch (error) {
         console.error('Auth check failed:', error)
+        return null
+    }
+}
+
+// Server-side helper to get the current auth session
+export async function getAuthSession() {
+    try {
+        const response = await fetch('/api/auth/session')
+        if (!response.ok) {
+            return null
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Session check failed:', error)
         return null
     }
 } 

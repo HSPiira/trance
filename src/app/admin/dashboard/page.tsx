@@ -103,13 +103,33 @@ const counsellorApplications = [
 export default function AdminDashboard() {
     const router = useRouter()
     const { user } = useAuth()
+    const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
-        if (!user || user.role !== 'ADMIN') {
-            router.push('/unauthorized')
+        // Check if user is loaded
+        if (user !== null) {
+            setIsLoading(false)
+
+            // Redirect if not admin
+            if (user && user.role !== 'ADMIN') {
+                router.push('/unauthorized')
+            }
         }
     }, [router, user])
 
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+                </div>
+            </div>
+        )
+    }
+
+    // Show nothing if no user (will redirect in useEffect)
     if (!user) {
         return null
     }

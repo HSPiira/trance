@@ -1,15 +1,16 @@
 import { cookies } from 'next/headers'
 import * as jose from 'jose'
-import bcrypt from 'bcryptjs'
-import { prisma } from './db/prisma'
+import { prisma } from './db'
 import type { User } from '@prisma/client'
 import { JWT_CONFIG } from './config'
 import { NextRequest } from 'next/server'
 
-// Hash a password
+// Hash a password using Web Crypto API
 export async function hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(10)
-    return bcrypt.hash(password, salt)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Buffer.from(hash).toString('base64');
 }
 
 // Compare a password with a hash
@@ -17,7 +18,8 @@ export async function comparePasswords(
     password: string,
     hash: string
 ): Promise<boolean> {
-    return bcrypt.compare(password, hash)
+    const hashedPassword = await hashPassword(password);
+    return hashedPassword === hash;
 }
 
 // Generate a JWT token
@@ -87,7 +89,6 @@ export async function getUserFromRequest(req: NextRequest): Promise<User | null>
             notes: true,
             resources: true,
             sessions: true,
-            auditLogs: true
         }
     })
 
@@ -116,7 +117,6 @@ export async function getCurrentUser() {
             notes: true,
             resources: true,
             sessions: true,
-            auditLogs: true
         }
     })
 
@@ -125,13 +125,19 @@ export async function getCurrentUser() {
 
 // Create an audit log entry
 export async function createAuditLog(userId: string, action: string, details?: any) {
-    return prisma.auditLog.create({
-        data: {
-            userId: userId,
-            action: action,
-            entityType: 'USER',
-            entityId: userId,
-            details: details || null,
-        },
-    })
+    try {
+        await prisma.auditLog.create({
+            data: {
+                userId,
+                action,
+                entityType: 'USER',
+                entityId: userId,
+                details: details || null,
+            }
+        });
+        return true;
+    } catch (error) {
+        console.error('Failed to create audit log:', error);
+        return false;
+    }
 }

@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { UserRole, ClientType } from '@/lib/db/schema'
+import { ClientType } from '@/lib/db/schema'
+import { UserRole } from '@prisma/client'
 import { Inter } from 'next/font/google'
 import { useTheme } from 'next-themes'
 
@@ -28,7 +29,7 @@ export default function RegisterPage() {
         firstName: '',
         lastName: '',
         phoneNumber: '',
-        role: 'CLIENT' as UserRole,
+        role: UserRole.STAFF,
         clientType: 'PRIMARY' as ClientType,
     })
     const [error, setError] = useState('')
@@ -155,13 +156,13 @@ export default function RegisterPage() {
                                         <SelectValue placeholder="Select your role" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="CLIENT">Client</SelectItem>
-                                        <SelectItem value="COUNSELLOR">Counsellor</SelectItem>
-                                        <SelectItem value="ADMIN">Admin</SelectItem>
+                                        <SelectItem value={UserRole.STAFF}>Staff</SelectItem>
+                                        <SelectItem value={UserRole.COUNSELOR}>Counselor</SelectItem>
+                                        <SelectItem value={UserRole.ADMIN}>Admin</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
-                            {formData.role === 'CLIENT' && (
+                            {formData.role === UserRole.STAFF && (
                                 <div className="space-y-2">
                                     <Label htmlFor="clientType" className="text-sm font-medium">Client Type</Label>
                                     <Select

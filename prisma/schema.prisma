@@ -9,11 +9,10 @@ datasource db {
 }
 
 model Client {
-  id           String       @id @default(uuid())
   name         String
   email        String
   phone        String
-  status       ClientStatus @default(ACTIVE)
+  status       ClientStatus
   joinDate     DateTime
   lastActive   DateTime
   clientType   ClientType
@@ -21,7 +20,7 @@ model Client {
   avatar       String?
   appointments Int          @default(0)
   resources    Int          @default(0)
-  isDeleted    Boolean      @default(false)
+  id           String       @id @default(uuid())
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   company      Company?
@@ -32,7 +31,6 @@ model Client {
 }
 
 model Person {
-  id          String          @id @default(uuid())
   fullName    String
   dateOfBirth DateTime
   gender      String
@@ -40,105 +38,93 @@ model Person {
   email       String?
   phone       String?
   address     String?
-  isDeleted   Boolean         @default(false)
+  id          String          @id @default(uuid())
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   asDependant Dependant?
   asEmployee  Employee?
   services    PersonService[]
-
-  @@index([fullName, dateOfBirth], map: "idx_person_name_dob")
-  @@index([nationalId], map: "idx_person_national_id")
-  @@index([email], map: "idx_person_email")
-  @@index([phone], map: "idx_person_phone")
 }
 
 model Company {
-  id                 String     @id @default(uuid())
   registrationNumber String     @unique
   industry           String?
   size               Int?
   website            String?
-  isDeleted          Boolean    @default(false)
+  clientId           String     @unique
+  id                 String     @id @default(uuid())
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
-  clientId           String     @unique
   client             Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
   employees          Employee[]
 }
 
 model Employee {
-  id             String         @id @default(uuid())
   employeeNumber String         @unique
   jobTitle       String?
   department     String?
   hireDate       DateTime
   status         EmployeeStatus @default(ACTIVE)
-  isDeleted      Boolean        @default(false)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
   personId       String         @unique
   companyId      String
+  id             String         @id @default(uuid())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   dependants     Dependant[]
   company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   person         Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
 }
 
 model Dependant {
-  id                  String   @id @default(uuid())
   relationship        String
-  isDeleted           Boolean  @default(false)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
   personId            String   @unique
   employeeId          String
+  id                  String   @id @default(uuid())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
   dependentOfEmployee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   person              Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
 }
 
 model Service {
-  id             String          @id @default(uuid())
   serviceName    String
   description    String?
   category       String?
   isActive       Boolean         @default(true)
-  isDeleted      Boolean         @default(false)
+  id             String          @id @default(uuid())
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   personServices PersonService[]
 }
 
 model PersonService {
-  id           String   @id @default(uuid())
   dateReceived DateTime
   notes        String?
-  isDeleted    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
   personId     String
   serviceId    String
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   person       Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
   service      Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
   name      String
-  role      UserRole
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  email     String     @unique
   password  String
+  role      UserRole
   avatar    String?
-  
-  // Relations
-  auditLogs   AuditLog[]
-  documents   Document[]
-  messages    Message[]
-  notes       Note[]
-  resources   Resource[]
-  sessions    Session[]
+  id        String     @id @default(uuid())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  isDeleted Boolean    @default(false)
+  auditLogs AuditLog[]
+  documents Document[]
+  messages  Message[]
+  notes     Note[]
+  resources Resource[]
+  sessions  Session[]
 }
 
 model AuditLog {
@@ -153,167 +139,128 @@ model AuditLog {
 }
 
 model Session {
-  id          String        @id @default(uuid())
   date        DateTime
   duration    Int
   status      SessionStatus
   notes       String?
   type        SessionType
-  isDeleted   Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
   clientId    String
   counselorId String
+  id          String        @id @default(uuid())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   counselor   User          @relation(fields: [counselorId], references: [id])
 }
 
 model Document {
-  id           String       @id @default(uuid())
   title        String
   type         DocumentType
   url          String
   size         Int
   uploadedAt   DateTime     @default(now())
-  isDeleted    Boolean      @default(false)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
   clientId     String
   uploadedById String
+  id           String       @id @default(uuid())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
   client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
   uploadedBy   User         @relation(fields: [uploadedById], references: [id])
 }
 
 model Note {
-  id        String   @id @default(uuid())
   content   String
   isPrivate Boolean  @default(false)
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
   clientId  String
   authorId  String
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   author    User     @relation(fields: [authorId], references: [id])
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 model Message {
-  id          String    @id @default(uuid())
   content     String
   sentAt      DateTime  @default(now())
   readAt      DateTime?
   attachments String[]
-  isDeleted   Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
   clientId    String
   senderId    String
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   sender      User      @relation(fields: [senderId], references: [id])
 }
 
 model Resource {
-  id          String       @id @default(uuid())
   title       String
   description String
   type        ResourceType
   url         String
-  isDeleted   Boolean      @default(false)
+  createdById String
+  id          String       @id @default(uuid())
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  createdById String
   createdBy   User         @relation(fields: [createdById], references: [id])
 }
 
+model base_model {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@map("_base_model")
+}
+
 enum ClientType {
-  COMPANY    @map("company")
-  INDIVIDUAL @map("individual")
+  COMPANY
+  INDIVIDUAL
 }
 
 enum ClientStatus {
-  ACTIVE     @map("active")
-  INACTIVE   @map("inactive")
-  PENDING    @map("pending")
-  SUSPENDED  @map("suspended")
-  TERMINATED @map("terminated")
-  ARCHIVED   @map("archived")
-  DELETED    @map("deleted")
-  BLOCKED    @map("blocked")
-  ON_HOLD    @map("on_hold")
+  ACTIVE
+  INACTIVE
 }
 
 enum EmployeeStatus {
-  ACTIVE     @map("active")
-  INACTIVE   @map("inactive")
-  ON_LEAVE   @map("on_leave")
-  TERMINATED @map("terminated")
-  RETIRED    @map("retired")
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
 }
 
 enum UserRole {
-  ADMIN       @map("admin")
-  COUNSELOR   @map("counselor")
-  STAFF       @map("staff")
-  CLIENT      @map("client")
-  MANAGER     @map("manager")
-  SUPER_ADMIN @map("super_admin")
-  HR          @map("hr")
+  ADMIN
+  COUNSELOR
+  STAFF
 }
 
 enum SessionStatus {
-  SCHEDULED   @map("scheduled")
-  IN_PROGRESS @map("in_progress")
-  RESCHEDULED @map("rescheduled")
-  COMPLETED   @map("completed")
-  CANCELLED   @map("cancelled")
-  NO_SHOW     @map("no_show")
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }
 
 enum SessionType {
-  INITIAL   @map("initial")
-  FOLLOW_UP @map("follow_up")
-  EMERGENCY @map("emergency")
-  GROUP     @map("group")
+  INITIAL
+  FOLLOW_UP
+  EMERGENCY
+  GROUP
 }
 
 enum DocumentType {
-  CONSENT      @map("consent")
-  ASSESSMENT   @map("assessment")
-  REPORT       @map("report")
-  INVOICE      @map("invoice")
-  RECEIPT      @map("receipt")
-  CONTRACT     @map("contract")
-  POLICY       @map("policy")
-  GUIDELINES   @map("guidelines")
-  FORM         @map("form")
-  CERTIFICATE  @map("certificate")
-  MANUAL       @map("manual")
-  PRESENTATION @map("presentation")
-  BROCHURE     @map("brochure")
-  FLYER        @map("flyer")
-  POSTER       @map("poster")
-  NEWSLETTER   @map("newsletter")
-  OTHER        @map("other")
+  CONSENT
+  ASSESSMENT
+  REPORT
+  OTHER
 }
 
 enum ResourceType {
-  ARTICLE      @map("article")
-  VIDEO        @map("video")
-  WORKSHOP     @map("workshop")
-  WEBINAR      @map("webinar")
-  PODCAST      @map("podcast")
-  TOOL         @map("tool")
-  TEMPLATE     @map("template")
-  EBOOK        @map("ebook")
-  GUIDE        @map("guide")
-  CHECKLIST    @map("checklist")
-  QUIZ         @map("quiz")
-  ASSESSMENT   @map("assessment")
-  INFOGRAPHIC  @map("infographic")
-  PRESENTATION @map("presentation")
-  CASE_STUDY   @map("case_study")
-  WHITEPAPER   @map("whitepaper")
-  RESEARCH     @map("research")
-  REPORT       @map("report")
-  STUDY        @map("study")
+  ARTICLE
+  VIDEO
+  WORKSHOP
+  TOOL
 }
